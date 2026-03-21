@@ -1,0 +1,87 @@
+{
+  "boundaries": [
+    {
+      "id": "climate",
+      "name": "Changement climatique",
+      "indicator": "CO₂ atmosphérique (ppm)",
+      "safe_limit": 350,
+      "current": 424,
+      "status": "critical",
+      "description": "Concentration de CO₂ dépasse largement la zone sûre (350 ppm)."
+    },
+    {
+      "id": "biodiversity",
+      "name": "Intégrité biosphère",
+      "indicator": "Taux d'extinction (E/MSY)",
+      "safe_limit": 10,
+      "current": 100,
+      "status": "critical",
+      "description": "Extinction 10-100x supérieure au taux naturel de fond."
+    },
+    {
+      "id": "land",
+      "name": "Changement d'usage des terres",
+      "indicator": "% forêts primaires restantes",
+      "safe_limit": 75,
+      "current": 60,
+      "status": "exceeded",
+      "description": "Déforestation massive, surtout tropiques."
+    },
+    {
+      "id": "freshwater",
+      "name": "Eau douce",
+      "indicator": "Prélèvement km³/an",
+      "safe_limit": 4000,
+      "current": 2600,
+      "status": "safe",
+      "description": "Encore dans la zone sûre globalement, mais stress régionaux critiques."
+    },
+    {
+      "id": "biogeochemical",
+      "name": "Flux biogéochimiques (N/P)",
+      "indicator": "N fixé industriellement (Mt N/an)",
+      "safe_limit": 62,
+      "current": 150,
+      "status": "critical",
+      "description": "Cycle de l'azote massivement perturbé (engrais, combustion)."
+    },
+    {
+      "id": "ocean",
+      "name": "Acidification des océans",
+      "indicator": "Saturation aragonite (Ω)",
+      "safe_limit": 2.75,
+      "current": 2.8,
+      "status": "safe",
+      "description": "Proche de la limite, tendance défavorable."
+    },
+    {
+      "id": "aerosols",
+      "name": "Charge en aérosols atmosphériques",
+      "indicator": "AOD (indice)",
+      "safe_limit": 0.25,
+      "current": 0.30,
+      "status": "exceeded",
+      "description": "Pollution particulaire dépasse la limite dans plusieurs régions."
+    },
+    {
+      "id": "ozone",
+      "name": "Appauvrissement ozone stratosphérique",
+      "indicator": "Concentration O₃ (DU)",
+      "safe_limit": 276,
+      "current": 283,
+      "status": "safe",
+      "description": "En récupération grâce au Protocole de Montréal."
+    },
+    {
+      "id": "novel_entities",
+      "name": "Entités nouvelles (polluants)",
+      "indicator": "Évaluation qualitative",
+      "safe_limit": null,
+      "current": null,
+      "status": "critical",
+      "description": "Plastiques, perturbateurs endocriniens, micropolluants — limites inconnues mais franchies."
+    }
+  ],
+  "source": "Stockholm Resilience Centre, 2023",
+  "last_update": "2024"
+}
