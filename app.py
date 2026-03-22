@@ -492,8 +492,3 @@ elif page == "🤖 Analyse IA":
         "pour activer les analyses IA. Sans clé, un message d'erreur s'affiche.",
         icon="ℹ️"
     )
-# Lancement de Streamlit avec le bon port
-if __name__ == "__main__":
-    import streamlit.web.cli as stcli
-    sys.argv = ["streamlit", "run", __file__, "--server.port", str(port), "--server.address=0.0.0.0"]
-    sys.exit(stcli.main())
