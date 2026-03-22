@@ -2,7 +2,8 @@
 app.py — World Model v0.1
 Simulation World3 + Limites Planétaires + Analyse Claude AI
 """
-
+import os
+port = int(os.environ.get('PORT', 8080))
 import streamlit as st
 import sys
 import time
@@ -491,3 +492,8 @@ elif page == "🤖 Analyse IA":
         "pour activer les analyses IA. Sans clé, un message d'erreur s'affiche.",
         icon="ℹ️"
     )
+# Lancement de Streamlit avec le bon port
+if __name__ == "__main__":
+    import streamlit.web.cli as stcli
+    sys.argv = ["streamlit", "run", __file__, "--server.port", str(port), "--server.address=0.0.0.0"]
+    sys.exit(stcli.main())
