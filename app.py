@@ -39,74 +39,110 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-  /* Fond global */
-  .stApp { background-color: #0e1117; }
-  
-  /* Sidebar */
-  section[data-testid="stSidebar"] { background-color: #12151f; }
-  
-  /* Métriques */
+  /* Fond global — ivoire clair */
+  .stApp {
+    background-color: #f8f5f0;
+    color: #2d3748;
+  }
+
+  /* Sidebar — papier recyclé légèrement texturé */
+  section[data-testid="stSidebar"] {
+    background-color: #f0eae2;
+    border-right: 1px solid #d1c7b7;
+  }
+
+  /* Métriques — fond blanc cassé */
   div[data-testid="metric-container"] {
-    background-color: #1a1f2e;
-    border: 1px solid #2a3040;
+    background-color: #ffffff;
+    border: 1px solid #d1c7b7;
     border-radius: 8px;
     padding: 12px 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
-  
-  /* Cards status */
+
+  /* Cards status — fond ivoire avec bordure colorée */
   .status-card {
     padding: 10px 14px;
     border-radius: 8px;
     margin: 4px 0;
     font-size: 0.9em;
+    background-color: #f9f7f3;
+    border-left: 3px solid #d1c7b7;
   }
-  .status-safe     { background: rgba(39,174,96,0.15); border-left: 3px solid #27ae60; }
-  .status-exceeded { background: rgba(230,126,34,0.15); border-left: 3px solid #e67e22; }
-  .status-critical { background: rgba(231,76,60,0.15);  border-left: 3px solid #e74c3c; }
-  
-  /* Header hero */
+  .status-safe     { border-left-color: #4a7c59; background-color: rgba(74, 124, 89, 0.05); }
+  .status-exceeded { border-left-color: #d68910; background-color: rgba(214, 137, 16, 0.05); }
+  .status-critical { border-left-color: #a8323e; background-color: rgba(168, 50, 62, 0.05); }
+
+  /* Header hero — fond légèrement texturé */
   .hero {
-    background: linear-gradient(135deg, #0e1117 0%, #1a1f2e 50%, #0e1117 100%);
-    border: 1px solid #2a3040;
+    background: linear-gradient(135deg, #f9f7f3 0%, #f0eae2 100%);
+    border: 1px solid #d1c7b7;
     border-radius: 12px;
     padding: 24px 32px;
     margin-bottom: 24px;
     text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   }
-  
-  /* Section headers */
+
+  /* Section headers — couleur terre cuite */
   .section-title {
     font-size: 1.1em;
     font-weight: 600;
-    color: #a0aec0;
+    color: #4a5568;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin: 8px 0 4px 0;
+    border-bottom: 1px solid #d1c7b7;
+    padding-bottom: 4px;
   }
-  
-  /* Analyse AI box */
+
+  /* Analyse AI box — fond blanc avec bordure discrète */
   .ai-output {
-    background: #1a1f2e;
-    border: 1px solid #2d4a7a;
+    background: #ffffff;
+    border: 1px solid #d1c7b7;
     border-radius: 10px;
     padding: 20px;
     margin-top: 12px;
     line-height: 1.7;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
-  
-  /* Badges scénario */
-  .badge-bau  { color: #e74c3c; font-weight: 700; }
-  .badge-bau2 { color: #e67e22; font-weight: 700; }
-  .badge-sw   { color: #27ae60; font-weight: 700; }
-  
-  /* Footer */
+
+  /* Badges scénario — couleurs terreuses */
+  .badge-bau  { color: #a8323e; font-weight: 700; }
+  .badge-bau2 { color: #d68910; font-weight: 700; }
+  .badge-sw   { color: #4a7c59; font-weight: 700; }
+
+  /* Footer — fond ivoire clair */
   .footer {
     text-align: center;
-    color: #4a5568;
+    color: #718096;
     font-size: 0.8em;
     margin-top: 40px;
     padding: 16px;
-    border-top: 1px solid #1a1f2e;
+    border-top: 1px solid #e2e8f0;
+    background-color: #f8f5f0;
+  }
+
+  /* Texte général — couleur foncée pour un bon contraste */
+  .stMarkdown, .stTextInput, .stSelectbox, .stButton>button {
+    color: #2d3748 !important;
+  }
+
+  /* Boutons — style terre cuite */
+  .stButton>button {
+    background-color: #d68910;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+  }
+  .stButton>button:hover {
+    background-color: #b87333;
+  }
+
+  /* Liens — couleur vert foncé */
+  a {
+    color: #4a7c59;
   }
 </style>
 """, unsafe_allow_html=True)
