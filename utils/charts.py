@@ -9,7 +9,7 @@ import pandas as pd
 import html as _html
 
 from models.world3 import SCENARIOS
-from models.planetary import boundary_radar_data
+from models.planetary import boundary_radar_data, STATUS_LABELS
 
 # --- THEME ---
 BACKGROUND_COLOR = "#f8f5f0"
@@ -24,6 +24,9 @@ VARIABLE_META = {
     "resources":       {"label": "Ressources (%)",  "yaxis": "%"},
     "pollution":       {"label": "Pollution",        "yaxis": "Index"},
     "capital":         {"label": "Capital industriel","yaxis": "Index"},
+    "life_expectancy": {"label": "Espérance de vie","yaxis": "Années"},
+    "food_per_capita": {"label": "Nourriture/habitant","yaxis": "Index"},
+    "hdi":             {"label": "HDI",              "yaxis": "Index"},
 }
 
 # =========================================================
@@ -82,3 +85,58 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
         margin={"l": 30, "r": 20, "t": 40, "b": 30}
     )
     return fig
+
+# =========================================================
+# DASHBOARD (4 variables core en 2x2)
+# =========================================================
+def chart_dashboard(results: dict, is_mobile: bool = False) -> go.Figure:
+    """Dashboard premium 2x2 avec responsive et légende optimisée"""
+    variables = ["population", "resources", "pollution", "capital"]
+    titles = [VARIABLE_META[v]["label"] for v in variables]
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=titles,
+        vertical_spacing=0.12,
+        horizontal_spacing=0.08,
+        specs=[
+            [{"secondary_y": False}, {"secondary_y": False}],
+            [{"secondary_y": False}, {"secondary_y": False}]
+        ]
+    )
+
+    positions = [(1,1), (1,2), (2,1), (2,2)]
+
+    for var, (r,c) in zip(variables, positions):
+        for key, df in results.items():
+            sc = SCENARIOS[key]
+            showlegend = (r == 1 and c == 1)  # Légende seulement sur le 1er graphique
+
+            fig.add_trace(
+                go.Scatter(
+                    x=df["year"],
+                    y=df[var],
+                    name=_html.escape(sc["label"]),
+                    line=dict(color=sc["color"], width=2.5 if not is_mobile else 2),
+                    showlegend=showlegend,
+                    hovertemplate=(
+                        f"<b>{_html.escape(sc['label'])}</b><br>"
+                        f"Année: %{x}<br>"
+                        f"{_html.escape(VARIABLE_META[var]['label'])}: %{y:.2f} {VARIABLE_META[var]['yaxis']}<extra></extra>"
+                    )
+                ),
+                row=r, col=c
+            )
+
+        # Mise à jour des axes pour chaque sous-graphique
+        fig.update_xaxes(
+            gridcolor=GRID_COLOR,
+            color=AXIS_COLOR,
+            row=r, col=c,
+            tickfont={"size": 10 if not is_mobile else 8}
+        )
+        fig.update_yaxes(
+            gridcolor=GRID_COLOR,
+            color=AXIS_COLOR,
+            row=r, col=c,
+            tick
