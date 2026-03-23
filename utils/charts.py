@@ -30,7 +30,7 @@ VARIABLE_META = {
 }
 
 # =========================================================
-# TRAJECTOIRES
+# TRAJECTOIRES (corrigé : templates Plotly natifs)
 # =========================================================
 def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) -> go.Figure:
     meta = VARIABLE_META.get(variable, {"label": variable, "yaxis": ""})
@@ -38,15 +38,16 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
 
     for key, df in results.items():
         sc = SCENARIOS[key]
+        # ✅ CORRECT : Pas de f-string mélangé avec templates Plotly
         fig.add_trace(go.Scatter(
             x=df["year"],
             y=df[variable],
             name=_html.escape(sc["label"]),
             line=dict(color=sc["color"], width=2.5 if not is_mobile else 2),
             hovertemplate=(
-                f"<b>{_html.escape(sc['label'])}</b><br>"
+                "<b>" + _html.escape(sc["label"]) + "</b><br>"
                 "Année: %{x}<br>"
-                f"{_html.escape(meta['label'])}: %{y:.2f} {meta['yaxis']}<extra></extra>"
+                + _html.escape(meta["label"]) + ": %{y:.2f} " + meta["yaxis"] + "<extra></extra>"
             )
         ))
 
@@ -67,7 +68,7 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
     return fig
 
 # =========================================================
-# DASHBOARD
+# DASHBOARD (corrigé : syntaxe valide)
 # =========================================================
 def chart_dashboard(results: dict, is_mobile: bool = False) -> go.Figure:
     variables = ["population", "resources", "pollution", "capital"]
@@ -89,9 +90,9 @@ def chart_dashboard(results: dict, is_mobile: bool = False) -> go.Figure:
                     line=dict(color=sc["color"], width=2.5 if not is_mobile else 2),
                     showlegend=showlegend,
                     hovertemplate=(
-                        f"<b>{_html.escape(sc['label'])}</b><br>"
+                        "<b>" + _html.escape(sc["label"]) + "</b><br>"
                         "Année: %{x}<br>"
-                        f"{_html.escape(VARIABLE_META[var]['label'])}: %{y:.2f} {VARIABLE_META[var]['yaxis']}<extra></extra>"
+                        + _html.escape(VARIABLE_META[var]["label"]) + ": %{y:.2f} " + VARIABLE_META[var]["yaxis"] + "<extra></extra>"
                     )
                 ),
                 row=r, col=c
@@ -116,7 +117,7 @@ def chart_dashboard(results: dict, is_mobile: bool = False) -> go.Figure:
     return fig
 
 # =========================================================
-# RADAR
+# RADAR (corrigé : syntaxe valide)
 # =========================================================
 def chart_planetary_boundaries(boundaries: list, is_mobile: bool = False) -> go.Figure:
     data = boundary_radar_data(boundaries)
@@ -124,46 +125,36 @@ def chart_planetary_boundaries(boundaries: list, is_mobile: bool = False) -> go.
     scores = [b["current"] for b in boundaries] + [boundaries[0]["current"]]
 
     fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(r=[0.2]*len(names), theta=names, fill="toself", fillcolor="rgba(74, 124, 89, 0.15)", line=dict(color="#4a7c59", width=1, dash="dash"), name=_html.escape("Zone sûre"), hoverinfo="skip"))
-    fig.add_trace(go.Scatterpolar(r=scores, theta=names, fill="toself", fillcolor="rgba(231, 76, 60, 0.2)", line=dict(color="#a8323e", width=2 if not is_mobile else 1.5), name=_html.escape("État actuel (2024)"),
-        hovertemplate=(f"<b>%{{theta}}</b><br>Valeur: %{{r:.2f}}<br>Statut: %{{customdata}}<extra></extra>"),
+    fig.add_trace(go.Scatterpolar(
+        r=[0.2]*len(names),
+        theta=names,
+        fill="toself",
+        fillcolor="rgba(74, 124, 89, 0.15)",
+        line=dict(color="#4a7c59", width=1, dash="dash"),
+        name=_html.escape("Zone sûre"),
+        hoverinfo="skip"
+    ))
+    fig.add_trace(go.Scatterpolar(
+        r=scores,
+        theta=names,
+        fill="toself",
+        fillcolor="rgba(231, 76, 60, 0.2)",
+        line=dict(color="#a8323e", width=2 if not is_mobile else 1.5),
+        name=_html.escape("État actuel (2024)"),
+        hovertemplate=(
+            "<b>%{theta}</b><br>"
+            "Valeur: %{r:.2f}<br>"
+            "Statut: %{customdata}<extra></extra>"
+        ),
         customdata=[_html.escape(STATUS_LABELS[b["status"]][0]) for b in boundaries] + [""]
     ))
 
     fig.update_layout(
-        polar=dict(radialaxis=dict(range=[0, 1.2], visible=True, gridcolor=GRID_COLOR, color=AXIS_COLOR, tickfont={"size": 10 if not is_mobile else 8}),
-        angularaxis=dict(gridcolor=GRID_COLOR, color=AXIS_COLOR, tickfont={"size": 10 if not is_mobile else 8}), bgcolor=PLOT_BACKGROUND),
+        polar=dict(
+            radialaxis=dict(range=[0, 1.2], visible=True, gridcolor=GRID_COLOR, color=AXIS_COLOR, tickfont={"size": 10 if not is_mobile else 8}),
+            angularaxis=dict(gridcolor=GRID_COLOR, color=AXIS_COLOR, tickfont={"size": 10 if not is_mobile else 8}),
+            bgcolor=PLOT_BACKGROUND
+        ),
         paper_bgcolor=BACKGROUND_COLOR,
         font={"color": TEXT_COLOR, "size": 11},
-        title={"text": _html.escape("9 Limites Planétaires — État 2024"), "font": {"size": 17 if not is_mobile else 14, "color": TEXT_COLOR}, "x": 0.5, "xanchor": "center"},
-        legend={"orientation": "h", "y": -0.1 if not is_mobile else -0.2, "font": {"size": 11 if not is_mobile else 9}},
-        height=420 if is_mobile else 500,
-        margin={"l": 20, "r": 15, "t": 40, "b": 20 if not is_mobile else 30}
-    )
-    return fig
-
-# =========================================================
-# BAR PLOT
-# =========================================================
-def chart_planetary_boundaries_as_bars(boundaries: list, is_mobile: bool = False) -> go.Figure:
-    df = pd.DataFrame(boundaries)
-    fig = px.bar(df, x="name", y="current", color="status",
-        color_discrete_map={"safe": "#4a7c59", "exceeded": "#d68910", "critical": "#a8323e"},
-        labels={"current": "Valeur actuelle", "name": "Limite planétaire"},
-        title=_html.escape("État des limites planétaires (2024)"),
-        category_orders={"name": [b["name"] for b in boundaries]}
-    )
-
-    fig.update_layout(
-        paper_bgcolor=BACKGROUND_COLOR,
-        plot_bgcolor=PLOT_BACKGROUND,
-        font={"color": TEXT_COLOR, "size": 10},
-        xaxis={"tickfont": {"size": 9 if not is_mobile else 7}, "tickangle": -45 if is_mobile else 0, "gridcolor": GRID_COLOR, "color": AXIS_COLOR},
-        yaxis={"tickfont": {"size": 9 if not is_mobile else 7}, "gridcolor": GRID_COLOR, "color": AXIS_COLOR},
-        legend={"orientation": "h", "y": -0.1, "font": {"size": 10}},
-        hovermode="x unified",
-        height=320 if is_mobile else 400,
-        margin={"l": 20, "r": 15, "t": 40, "b": 20 if not is_mobile else 30}
-    )
-    fig.update_traces(texttemplate="%{y:.2f}", textposition="outside", textfont={"size": 9 if not is_mobile else 7, "color": TEXT_COLOR})
-    return fig
+        title={"text": _html.escape("9 Limites Planétaires — État 2024"), "font": {"size": 17 if not is_mobile else 14, "color": TEXT_COLOR}, "x": 0.5, "x
