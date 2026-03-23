@@ -2,7 +2,8 @@
 app.py — World Model v0.1
 Version finale 100% fonctionnelle (Railway, Plotly, responsive)
 """
-
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 import os
 import sys
 import time
