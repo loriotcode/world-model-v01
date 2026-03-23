@@ -1,407 +1,224 @@
-"""
-app.py — World Model v0.1
-Simulation World3 + Limites Planétaires + Analyse Claude AI
-Thème : Ivoire/Papier recyclé avec graphiques bleu clair pâle
-"""
+""" app.py — World Model v0.1 (UI premium stable)
 
-import os
-import sys
-import time
-import logging
-import html as _html
-import re
-from pathlib import Path
-import streamlit as st
-import pandas as pd
+UI premium (cards, hero, typographie, spacing)
 
-# --- Configuration du chemin racine (CRUCIAL pour Railway et local) ---
-_PROJECT_ROOT = str(Path(__file__).resolve().parent)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+CSS complet mais sûr pour Streamlit (pas de hacks cassants)
 
-# --- Imports locaux (après configuration du chemin) ---
-from models.world3 import run_all_scenarios, SCENARIOS
-from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS
-from utils.charts import chart_trajectories, chart_dashboard, chart_planetary_boundaries, chart_planetary_boundaries_as_bars
-from services.claude_api import analyse_scenario, extract_summary
-from utils.logging_config import configure_logging
+st.set_page_config en tête
 
-# --- Logging ---
+mode mobile contrôlé (toggle)
+
+Plotly stabilisé (responsive + pas de toolbar) """
+
+
+import os import sys import time import html as _html from pathlib import Path
+
+import streamlit as st import pandas as pd
+
+--- CONFIG STREAMLIT (OBLIGATOIRE EN PREMIER) ---
+
+st.set_page_config( page_title="World Model v0.1", page_icon="🌍", layout="wide", initial_sidebar_state="expanded", )
+
+--- PATH ROOT ---
+
+_PROJECT_ROOT = str(Path(file).resolve().parent) if _PROJECT_ROOT not in sys.path: sys.path.insert(0, _PROJECT_ROOT)
+
+--- IMPORTS ---
+
+from models.world3 import run_all_scenarios, SCENARIOS from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS from utils.charts import ( chart_trajectories, chart_dashboard, chart_planetary_boundaries, chart_planetary_boundaries_as_bars, ) from services.claude_api import analyse_scenario, extract_summary from utils.logging_config import configure_logging
+
 configure_logging()
 
-# --- Détection mobile (solution native 100% Streamlit, sans dépendance externe) ---
-if "is_mobile" not in st.session_state:
-    try:
-        user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
-        if isinstance(user_agent, str) and re.match(r'^[a-zA-Z0-9\s\-\(\)\.,;:!?/]+$', user_agent):
-            st.session_state.is_mobile = bool(re.search(r"(android|ios|iphone|ipad|mobile)", user_agent.lower()))
-        else:
-            st.session_state.is_mobile = False
-    except Exception:
-        st.session_state.is_mobile = False
+--- SESSION STATE ---
 
-# --- Initialisation des états de session ---
-if "mobile_guidance_shown" not in st.session_state:
-    st.session_state.mobile_guidance_shown = False
-if "last_analysis" not in st.session_state:
-    st.session_state.last_analysis = []
+if "is_mobile" not in st.session_state: st.session_state.is_mobile = False if "last_analysis" not in st.session_state: st.session_state.last_analysis = []
 
-# --- CSS personnalisé (thème ivoire/bleu clair) ---
+--- CSS PREMIUM SAFE ---
+
 st.markdown("""
+
 <style>
-  .stApp { background-color: #f8f5f0; color: #2d3748; }
-  section[data-testid="stSidebar"] { background-color: #f0eae2; border-right: 1px solid #d1c7b7; }
-  div[data-testid="metric-container"] {
-    background-color: #ffffff; border: 1px solid #d1c7b7; border-radius: 8px; padding: 12px 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-  .status-card {
-    padding: 10px 14px; border-radius: 8px; margin: 4px 0; font-size: 0.9em;
-    background-color: #f9f7f3; border-left: 3px solid #d1c7b7;
-  }
-  .status-safe { border-left-color: #4a7c59; background-color: rgba(74, 124, 89, 0.05); }
-  .status-exceeded { border-left-color: #d68910; background-color: rgba(214, 137, 16, 0.05); }
-  .status-critical { border-left-color: #a8323e; background-color: rgba(168, 50, 62, 0.05); }
-  .hero {
-    background: linear-gradient(135deg, #f9f7f3 0%, #f0eae2 100%); border: 1px solid #d1c7b7;
-    border-radius: 12px; padding: 24px 32px; margin-bottom: 24px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  }
-  .ai-output {
-    background: #ffffff; border: 1px solid #d1c7b7; border-radius: 10px; padding: 20px;
-    margin-top: 12px; line-height: 1.7; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-  .footer {
-    text-align: center; color: #718096; font-size: 0.8em; margin-top: 40px;
-    padding: 16px; border-top: 1px solid #e2e8f0; background-color: #f8f5f0;
-  }
-  .graph-guide {
-    background-color: #f0eae2; padding: 12px; border-radius: 8px; margin-bottom: 16px;
-    border-left: 3px solid #d68910;
-  }
-</style>
-""", unsafe_allow_html=True)
+:root {
+  --bg: #f8f5f0;
+  --panel: #ffffff;
+  --accent: #6fa8dc;
+  --border: #d1c7b7;
+  --text: #2d3748;
+}
 
-# --- Cache des données ---
-@st.cache_data(ttl=3600)
-def get_simulations():
-    return run_all_scenarios()
+.stApp {
+  background-color: var(--bg);
+  color: var(--text);
+}
 
-@st.cache_data(ttl=3600)
-def get_boundaries():
-    return load_boundaries()
+section[data-testid="stSidebar"] {
+  background-color: #f0eae2;
+  border-right: 1px solid var(--border);
+}
 
-# --- Chargement des données ---
-results = get_simulations()
-boundaries = get_boundaries()
-counts = get_status_counts(boundaries)
+.hero {
+  background: linear-gradient(135deg, #f9f7f3, #f0eae2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 26px;
+  margin-bottom: 20px;
+  text-align: center;
+}
 
-# --- Config page ---
-st.set_page_config(
-    page_title="World Model v0.1",
-    page_icon="🌍",
-    layout="wide",
-    initial_sidebar_state="expanded",
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.status-card {
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin: 6px 0;
+  background: #f9f7f3;
+  border-left: 4px solid var(--border);
+}
+
+.status-safe { border-left-color: #4a7c59; }
+.status-exceeded { border-left-color: #d68910; }
+.status-critical { border-left-color: #a8323e; }
+
+.metric-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.footer {
+  margin-top: 40px;
+  padding-top: 10px;
+  font-size: 0.8em;
+  color: #718096;
+  text-align: center;
+}
+</style>""", unsafe_allow_html=True)
+
+--- CACHE ---
+
+@st.cache_data(ttl=3600) def get_simulations(): return run_all_scenarios()
+
+@st.cache_data(ttl=3600) def get_boundaries(): return load_boundaries()
+
+results = get_simulations() boundaries = get_boundaries() counts = get_status_counts(boundaries)
+
+--- SIDEBAR ---
+
+with st.sidebar: st.markdown("## 🌍 World Model") st.toggle("Mode mobile", key="is_mobile") st.divider()
+
+page = st.radio(
+    "Navigation",
+    ["🏠 Vue d'ensemble", "📈 Scénarios", "🌐 Limites planétaires", "🤖 Analyse IA"],
+    label_visibility="collapsed"
 )
 
-# --- Guidage mobile (version Streamlit native) ---
-if st.session_state.get("is_mobile", False) and not st.session_state.mobile_guidance_shown:
-    with st.expander("📱 Conseils pour mobile (cliquez pour ouvrir)", expanded=True):
-        st.warning("""
-        Pour une expérience optimale :
-        - Tournez votre appareil en **mode paysage**.
-        - Sélectionnez une variable à la fois en mode portrait.
-        - Utilisez deux doigts pour zoomer.
-        """)
-        if st.button("Compris !"):
-            st.session_state.mobile_guidance_shown = True
-            st.rerun()
-
-# --- SIDEBAR ---
-with st.sidebar:
-    st.markdown("## 🌍 World Model v0.1")
-    st.markdown("*Simulation systèmes Terre*")
-    st.divider()
-    page = st.radio(
-        "Navigation",
-        ["🏠 Vue d'ensemble", "📈 Scénarios", "🌐 Limites planétaires", "🤖 Analyse IA"],
-        label_visibility="collapsed"
-    )
-    st.divider()
-    st.markdown("**Scénarios**")
-    for key, sc in SCENARIOS.items():
-        color = sc["color"]
-        st.markdown(
-            f"<div style='display:flex;align-items:center;gap:8px;margin:4px 0'>"
-            f"<div style='width:12px;height:12px;border-radius:50%;background:{color};flex-shrink:0'></div>"
-            f"<span style='font-size:0.85em;color:#cbd5e0'>{_html.escape(sc['label'].split('(')[0].strip())}</span>"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-    st.divider()
+st.divider()
+st.markdown("**Scénarios**")
+for key, sc in SCENARIOS.items():
     st.markdown(
-        "<div style='font-size:0.75em;color:#4a5568'>"
-        "Basé sur Meadows et al.<br><i>Limits to Growth</i> (1972)<br>"
-        "Rockström et al. (2009, 2023)<br><br>"
-        "World Model v0.1 — 2026"
-        "</div>",
-        unsafe_allow_html=True
-    )
-
-# --- PAGE : VUE D'ENSEMBLE ---
-if page == "🏠 Vue d'ensemble":
-    st.markdown("""
-    <div class="hero">
-        <h1 style="font-size:2em;margin:0;color:#2d3748">🌍 World Model v0.1</h1>
-        <p style="color:#4a5568;margin:8px 0 0 0;font-size:1.05em">
-            Simulation des trajectoires planétaires 1970–2100 · Limites planétaires · Analyse IA
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Métriques globales
-    col1, col2, col3, col4 = st.columns(4)
-    bau_2050 = results["BAU"][results["BAU"]["year"] == 2050].iloc[0]
-    sw_2050  = results["SW"][results["SW"]["year"] == 2050].iloc[0]
-    with col1:
-        st.metric("Limites planétaires dépassées", f"{counts['exceeded'] + counts['critical']}/9",
-                  delta=f"{counts['critical']} critiques", delta_color="inverse")
-    with col2:
-        st.metric("Population 2050 (BAU)", f"{bau_2050['population']:.1f} Md",
-                  delta=f"↑ vs {results['BAU'][results['BAU']['year']==2026].iloc[0]['population']:.1f} Md (2026)")
-    with col3:
-        st.metric("Ressources 2050 (BAU)", f"{bau_2050['resources']*100:.0f}%",
-                  delta=f"{(bau_2050['resources']-1)*100:.0f}%", delta_color="inverse")
-    with col4:
-        st.metric("HDI 2050 — SW vs BAU",
-                  f"{sw_2050['hdi']:.2f} / {bau_2050['hdi']:.2f}",
-                  delta=f"+{(sw_2050['hdi']-bau_2050['hdi']):.2f} avec transition", delta_color="normal")
-
-    st.markdown("---")
-
-    # --- TRAJECTOIRES (adaptatif) ---
-    st.markdown("### Trajectoires — 4 variables core")
-    if st.session_state.get("is_mobile", False):
-        st.markdown("""
-        <div class="graph-guide">
-        📱 <b>Conseil</b> : Tournez votre appareil en mode paysage pour une meilleure visualisation,
-        ou sélectionnez une variable ci-dessous.
-        </div>
-        """, unsafe_allow_html=True)
-        selected_var = st.selectbox(
-            "Variable à afficher (mode portrait)",
-            options=["population", "resources", "pollution", "capital"],
-            format_func=lambda x: {
-                "population": "Population (Md)",
-                "resources": "Ressources (%)",
-                "pollution": "Pollution",
-                "capital": "Capital industriel"
-            }[x]
-        )
-        st.plotly_chart(
-            chart_trajectories(results, selected_var, is_mobile=st.session_state.get("is_mobile", False)),
-            use_container_width=True,
-            config={"responsive": True, "displayModeBar": False, "scrollZoom": True}
-        )
-    else:
-        st.plotly_chart(
-            chart_dashboard(results, is_mobile=st.session_state.get("is_mobile", False)),
-            use_container_width=True,
-            config={"responsive": True}
-        )
-
-    # --- CONTEXTE ---
-    st.markdown("---")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("### Qu'est-ce que ce modèle ?")
-        st.markdown("""
-        **World Model v0.1** est une simulation des grands systèmes Terre basée sur les équations
-        du modèle World3 (Meadows et al., *Limits to Growth*, 1972).
-        Il modélise les interactions entre **4 stocks planétaires** :
-        - 👥 Population mondiale
-        - 🏭 Capital industriel
-        - ☠️ Pollution globale
-        - ⛏️ Ressources non-renouvelables
-        """)
-    with col_b:
-        st.markdown("### Les 3 scénarios")
-        for key, sc in SCENARIOS.items():
-            color = sc["color"]
-            st.markdown(
-                f"<div class='status-card' style='border-left-color:{color};background:rgba(0,0,0,0.2)'>"
-                f"<b style='color:{color}'>{_html.escape(sc['label'])}</b><br>"
-                f"<span style='color:#a0aec0;font-size:0.88em'>{_html.escape(sc['description'])}</span>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
-    st.markdown("""
-    <div class="footer">
-        Modèle simplifié à des fins de démonstration.
-        Sources : Meadows et al. (1972, 2004) · Stockholm Resilience Centre (2023) · Rockström et al. (2009)
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- PAGE : LIMITE PLANÉTAIRES ---
-elif page == "🌐 Limites planétaires":
-    st.markdown("## 🌐 Les 9 limites planétaires")
-    st.markdown("*Rockström et al. (2009) · Stockholm Resilience Centre (2023)*")
-
-    # Compteurs
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("✅ Zone sûre", counts["safe"])
-    with col2:
-        st.metric("⚠️ Dépassée", counts["exceeded"])
-    with col3:
-        st.metric("🔴 Critique", counts["critical"])
-
-    st.markdown("---")
-
-    # Graphique adaptatif
-    if st.session_state.get("is_mobile", False):
-        st.markdown("""
-        <div class="graph-guide">
-        📱 <b>Conseil</b> : Tournez votre appareil en mode paysage pour voir le graphique radar,
-        ou consultez le barplot ci-dessous.
-        </div>
-        """, unsafe_allow_html=True)
-        st.plotly_chart(
-            chart_planetary_boundaries_as_bars(boundaries, is_mobile=st.session_state.get("is_mobile", False)),
-            use_container_width=True,
-            config={"responsive": True, "displayModeBar": False}
-        )
-    else:
-        st.plotly_chart(
-            chart_planetary_boundaries(boundaries, is_mobile=st.session_state.get("is_mobile", False)),
-            use_container_width=True,
-            config={"responsive": True}
-        )
-
-    # Détail des limites
-    st.markdown("### Détail des 9 limites")
-    for b in boundaries:
-        label, color = STATUS_LABELS[b["status"]]
-        css_class = {"safe": "status-safe", "exceeded": "status-exceeded", "critical": "status-critical"}.get(b["status"], "status-safe")
-        st.markdown(
-            f"<div class='status-card {css_class}'>"
-            f"<b>{_html.escape(b['name'])}</b> &nbsp; <span style='font-size:0.85em'>{_html.escape(label)}</span>"
-            f"<br><span style='color:#a0aec0;font-size:0.85em'>{_html.escape(b['description'])}</span>"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-
-# --- PAGE : ANALYSE IA ---
-elif page == "🤖 Analyse IA":
-    st.markdown("## 🤖 Analyse IA — Powered by Claude")
-    st.markdown("Sélectionnez un scénario pour recevoir une analyse structurée.")
-
-    selected_scenario = st.selectbox(
-        "Scénario à analyser",
-        options=list(SCENARIOS.keys()),
-        format_func=lambda x: SCENARIOS[x]["label"]
-    )
-    sc = SCENARIOS[selected_scenario]
-    st.markdown(
-        f"<div class='status-card' style='border-left-color:{sc['color']};background:rgba(0,0,0,0.2)'>"
-        f"<b style='color:{sc['color']}'>{_html.escape(sc['label'])}</b><br>"
-        f"<span style='color:#a0aec0;font-size:0.88em'>{_html.escape(sc['description'])}</span>"
+        f"<div style='display:flex;gap:8px;align-items:center'>"
+        f"<div style='width:10px;height:10px;border-radius:50%;background:{sc['color']}'></div>"
+        f"<span style='font-size:0.85em'>{_html.escape(sc['label'])}</span>"
         f"</div>",
         unsafe_allow_html=True
     )
 
-    # Bouton d'analyse
-    now = time.time()
-    last_call = st.session_state.get("last_api_call", 0)
-    cooldown = 10
-    btn_disabled = (now - last_call) < cooldown
-    remaining = max(0, int(cooldown - (now - last_call)))
+--- PAGE : HOME ---
 
-    if btn_disabled:
-        st.warning(f"⏳ Analyse disponible dans {remaining}s...")
+if page == "🏠 Vue d'ensemble":
 
-    if st.button(
-        f"🤖 Analyser le scénario {selected_scenario} avec Claude",
-        type="primary",
-        disabled=btn_disabled
-    ):
-        st.session_state["last_api_call"] = time.time()
-        with st.spinner("Claude analyse les trajectoires..."):
-            df_selected = results[selected_scenario]
-            summary = extract_summary(df_selected, selected_scenario)
-            analysis = analyse_scenario(selected_scenario, summary)
-            st.markdown(f"<div class='ai-output'>{analysis}</div>", unsafe_allow_html=True)
-            if len(st.session_state.last_analysis) >= 10:
-                st.session_state.last_analysis.pop(0)
-            st.session_state.last_analysis.append({"scenario": selected_scenario, "time": time.strftime("%H:%M:%S")})
+st.markdown("""
+<div class="hero">
+    <h2>🌍 World Model v0.1</h2>
+    <p>Simulation systémique · World3 · Limites planétaires · IA</p>
+</div>
+""", unsafe_allow_html=True)
 
-    # Historique des analyses
-    if st.session_state.last_analysis:
-        st.markdown("---")
-        st.markdown("### 📊 Historique des analyses")
-        for i, analysis in enumerate(reversed(st.session_state.last_analysis[-3:])):
-            st.markdown(
-                f"<div class='status-card' style='border-left-color: #d68910; margin-bottom: 8px;'>"
-                f"<b>Analyse {len(st.session_state.last_analysis)-i}</b> : "
-                f"<span style='color: #2d3748;'>{analysis['scenario']} — {analysis['time']}</span>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
+col1, col2, col3, col4 = st.columns(4)
 
-    st.info(
-        "💡 **Configuration requise** : Ajoutez votre clé `ANTHROPIC_API_KEY` dans le fichier `.env` "
-        "pour activer les analyses IA.",
-        icon="ℹ️"
-    )
+bau_2050 = results["BAU"][results["BAU"]["year"] == 2050].iloc[0]
+sw_2050 = results["SW"][results["SW"]["year"] == 2050].iloc[0]
 
-# --- PAGE : SCÉNARIOS ---
+col1.metric("Limites", f"{counts['exceeded'] + counts['critical']}/9")
+col2.metric("Population", f"{bau_2050['population']:.1f} Md")
+col3.metric("Ressources", f"{bau_2050['resources']*100:.0f}%")
+col4.metric("HDI", f"{sw_2050['hdi']:.2f}/{bau_2050['hdi']:.2f}")
+
+st.markdown("---")
+
+if st.session_state.is_mobile:
+    var = st.selectbox("Variable", ["population","resources","pollution","capital"])
+    fig = chart_trajectories(results, var, is_mobile=True)
+else:
+    fig = chart_dashboard(results, is_mobile=False)
+
+st.plotly_chart(fig, use_container_width=True, config={"responsive": True, "displayModeBar": False})
+
+--- PAGE : LIMITES ---
+
+elif page == "🌐 Limites planétaires":
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Safe", counts["safe"])
+col2.metric("Exceeded", counts["exceeded"])
+col3.metric("Critical", counts["critical"])
+
+if st.session_state.is_mobile:
+    fig = chart_planetary_boundaries_as_bars(boundaries, is_mobile=True)
+else:
+    fig = chart_planetary_boundaries(boundaries, is_mobile=False)
+
+st.plotly_chart(fig, use_container_width=True, config={"responsive": True, "displayModeBar": False})
+
+for b in boundaries:
+    label, _ = STATUS_LABELS[b["status"]]
+    css = f"status-{b['status']}"
+    st.markdown(f"<div class='status-card {css}'><b>{b['name']}</b> — {label}</div>", unsafe_allow_html=True)
+
+--- PAGE : SCENARIOS ---
+
 elif page == "📈 Scénarios":
-    st.markdown("## 📈 Exploration des scénarios")
-    col_ctrl1, col_ctrl2 = st.columns([1, 2])
-    with col_ctrl1:
-        variable = st.selectbox(
-            "Variable à afficher",
-            options=["population", "resources", "pollution", "capital", "life_expectancy", "food_per_capita", "hdi"],
-            format_func=lambda x: {
-                "population": "Population (Md)", "resources": "Ressources (%)",
-                "pollution": "Pollution", "capital": "Capital industriel",
-                "life_expectancy": "Espérance de vie (ans)", "food_per_capita": "Nourriture/habitant", "hdi": "IDH"
-            }[x]
-        )
-    with col_ctrl2:
-        scenarios_shown = st.multiselect(
-            "Scénarios à comparer",
-            options=list(SCENARIOS.keys()),
-            default=list(SCENARIOS.keys()),
-            format_func=lambda x: SCENARIOS[x]["label"]
-        )
 
-    if not scenarios_shown:
-        st.warning("Sélectionnez au moins un scénario.")
-    else:
-        filtered = {k: v for k, v in results.items() if k in scenarios_shown}
-        st.plotly_chart(
-            chart_trajectories(filtered, variable, is_mobile=st.session_state.get("is_mobile", False)),
-            use_container_width=True,
-            config={"responsive": True}
-        )
+variable = st.selectbox("Variable", [
+    "population","resources","pollution","capital",
+    "life_expectancy","food_per_capita","hdi"
+])
 
-    # Tableau comparatif
-    st.markdown("---")
-    st.markdown("### Tableau comparatif — années clés")
-    years_display = [2026, 2035, 2050, 2075, 2100]
-    tabs = st.tabs([SCENARIOS[k]["label"] for k in SCENARIOS])
-    for tab, (key, sc) in zip(tabs, SCENARIOS.items()):
-        with tab:
-            df = results[key]
-            rows = []
-            for yr in years_display:
-                r = df[df["year"] == yr].iloc[0]
-                rows.append({
-                    "Année": yr,
-                    "Population (Md)": f"{r['population']:.2f}",
-                    "Ressources (%)": f"{r['resources']*100:.0f}",
-                    "Pollution": f"{r['pollution']:.3f}",
-                    "Capital": f"{r['capital']:.3f}",
-                    "HDI": f"{r['hdi']:.2f}",
-                })
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+scenarios = st.multiselect("Scénarios", list(SCENARIOS.keys()), default=list(SCENARIOS.keys()))
+
+if scenarios:
+    filtered = {k: results[k] for k in scenarios}
+    fig = chart_trajectories(filtered, variable, is_mobile=st.session_state.is_mobile)
+    st.plotly_chart(fig, use_container_width=True, config={"responsive": True, "displayModeBar": False})
+
+--- PAGE : IA ---
+
+elif page == "🤖 Analyse IA":
+
+selected = st.selectbox("Scénario", list(SCENARIOS.keys()))
+
+now = time.time()
+last = st.session_state.get("last_api_call", 0)
+
+if now - last < 10:
+    st.warning("Attendez 10s entre les analyses")
+
+if st.button("Analyser"):
+    st.session_state["last_api_call"] = time.time()
+
+    df = results[selected]
+    summary = extract_summary(df, selected)
+    analysis = analyse_scenario(selected, summary)
+
+    st.markdown(f"<div class='card'>{analysis}</div>", unsafe_allow_html=True)
+
+--- FOOTER ---
+
+st.markdown("<div class='footer'>World Model v0.1 · 2026</div>", unsafe_allow_html=True)
