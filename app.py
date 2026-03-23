@@ -12,7 +12,6 @@ from pathlib import Path
 import streamlit as st
 import pandas as pd
 
-# --- Configuration Streamlit (OBLIGATOIRE EN PREMIER) ---
 st.set_page_config(
     page_title="World Model v0.1",
     page_icon="🌍",
@@ -20,12 +19,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- Chemin racine ---
 _PROJECT_ROOT = str(Path(__file__).resolve().parent)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-# --- Imports locaux ---
 from models.world3 import run_all_scenarios, SCENARIOS
 from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS
 from utils.charts import (
@@ -37,16 +34,29 @@ from utils.charts import (
 from services.claude_api import analyse_scenario, extract_summary
 from utils.logging_config import configure_logging
 
-# --- Logging ---
 configure_logging()
 
-# --- Session State ---
 if "is_mobile" not in st.session_state:
     st.session_state.is_mobile = False
 if "last_analysis" not in st.session_state:
     st.session_state.last_analysis = []
 
-# --- CSS PREMIUM (sécurisé) ---
+# Config Plotly : simple, sans zoom ni pan
+PLOTLY_CONFIG = {
+    "responsive": True,
+    "displayModeBar": True,
+    "modeBarButtonsToRemove": [
+        "zoom2d", "pan2d", "select2d", "lasso2d",
+        "zoomIn2d", "zoomOut2d", "autoScale2d",
+        "hoverClosestCartesian", "hoverCompareCartesian",
+        "toggleSpikelines",
+    ],
+    "modeBarButtonsToAdd": [],
+    "displaylogo": False,
+    "scrollZoom": False,
+    "doubleClick": False,
+}
+
 st.markdown("""
 <style>
 :root {
@@ -55,17 +65,11 @@ st.markdown("""
   --border: #d1c7b7;
   --text: #2d3748;
 }
-
-.stApp {
-  background-color: var(--bg);
-  color: var(--text);
-}
-
+.stApp { background-color: var(--bg); color: var(--text); }
 section[data-testid="stSidebar"] {
   background-color: #f0eae2;
   border-right: 1px solid var(--border);
 }
-
 .hero {
   background: linear-gradient(135deg, #f9f7f3, #f0eae2);
   border: 1px solid var(--border);
@@ -74,7 +78,6 @@ section[data-testid="stSidebar"] {
   margin-bottom: 20px;
   text-align: center;
 }
-
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -82,7 +85,6 @@ section[data-testid="stSidebar"] {
   padding: 16px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.04);
 }
-
 .status-card {
   padding: 10px 14px;
   border-radius: 10px;
@@ -90,18 +92,15 @@ section[data-testid="stSidebar"] {
   background: #f9f7f3;
   border-left: 4px solid var(--border);
 }
-
 .status-safe { border-left-color: #4a7c59; }
 .status-exceeded { border-left-color: #d68910; }
 .status-critical { border-left-color: #a8323e; }
-
 .metric-card {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px;
 }
-
 .footer {
   margin-top: 40px;
   padding-top: 10px;
@@ -112,7 +111,6 @@ section[data-testid="stSidebar"] {
 </style>
 """, unsafe_allow_html=True)
 
-# --- Cache FIXÉ (coroutine évitée) ---
 @st.cache_resource
 def get_simulations():
     return run_all_scenarios()
@@ -121,7 +119,6 @@ def get_simulations():
 def get_boundaries():
     return load_boundaries()
 
-# --- Chargement des données ---
 results = get_simulations()
 boundaries = get_boundaries()
 counts = get_status_counts(boundaries)
@@ -177,7 +174,7 @@ if page == "🏠 Vue d'ensemble":
     else:
         fig = chart_dashboard(results, is_mobile=False)
 
-    st.plotly_chart(fig, use_container_width=True, config={"responsive": True, "displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 # --- PAGE : LIMITES ---
 elif page == "🌐 Limites planétaires":
@@ -186,17 +183,17 @@ elif page == "🌐 Limites planétaires":
     col2.metric("Exceeded", counts["exceeded"])
     col3.metric("Critical", counts["critical"])
 
-    if st.session_state.is_mobile:
-        fig = chart_planetary_boundaries_as_bars(boundaries, is_mobile=True)
-    else:
-        fig = chart_planetary_boundaries(boundaries, is_mobile=False)
-
-    st.plotly_chart(fig, use_container_width=True, config={"responsive": True, "displayModeBar": False})
+    # Barres sur desktop ET mobile — radar supprimé (illisible)
+    fig = chart_planetary_boundaries_as_bars(boundaries, is_mobile=st.session_state.is_mobile)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
     for b in boundaries:
         label, _ = STATUS_LABELS[b["status"]]
         css = f"status-{b['status']}"
-        st.markdown(f"<div class='status-card {css}'><b>{b['name']}</b> — {label}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='status-card {css}'><b>{b['name']}</b> — {label}</div>",
+            unsafe_allow_html=True
+        )
 
 # --- PAGE : SCENARIOS ---
 elif page == "📈 Scénarios":
@@ -214,7 +211,7 @@ elif page == "📈 Scénarios":
     if scenarios:
         filtered = {k: results[k] for k in scenarios}
         fig = chart_trajectories(filtered, variable, is_mobile=st.session_state.is_mobile)
-        st.plotly_chart(fig, use_container_width=True, config={"responsive": True, "displayModeBar": False})
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 # --- PAGE : IA ---
 elif page == "🤖 Analyse IA":
