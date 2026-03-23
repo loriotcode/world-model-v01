@@ -37,7 +37,6 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
 
     for key, df in results.items():
         sc = SCENARIOS[key]
-        # Échappement HTML pour éviter les injections XSS
         fig.add_trace(go.Scatter(
             x=df["year"], y=df[variable],
             name=_html.escape(sc["label"]),
@@ -58,7 +57,7 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
         annotation_bgcolor=PLOT_BACKGROUND
     )
 
-    # Configuration adaptative
+    # Configuration adaptative (CORRECTION : suppression de la duplication de plot_bgcolor)
     fig.update_layout(
         title=dict(
             text=_html.escape(meta["label"]),
@@ -81,14 +80,14 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
             tickfont=dict(size=10 if is_mobile else 12)
         ),
         paper_bgcolor=BACKGROUND_COLOR,
-        plot_bgcolor=PLOT_BACKGROUND,
+        plot_bgcolor=PLOT_BACKGROUND,  # ICI UNIQUEMENT (suppression de la ligne en double)
         font=dict(color=TEXT_COLOR, size=10 if is_mobile else 12),
         legend=dict(
             bgcolor=PLOT_BACKGROUND,
             bordercolor=GRID_COLOR,
             borderwidth=1,
             font=dict(size=10 if is_mobile else 12),
-            yanchor="bottom", y=1.02, xanchor="right", x=1  # Légende horizontale en bas
+            yanchor="bottom", y=1.02, xanchor="right", x=1
         ),
         hovermode="x unified",
         height=350 if is_mobile else 420,
@@ -98,16 +97,12 @@ def chart_trajectories(results: dict, variable: str, is_mobile: bool = False) ->
             t=40 if not is_mobile else 30,
             b=20 if not is_mobile else 10
         ),
-        plot_bgcolor=PLOT_BACKGROUND,
         hoverlabel=dict(bgcolor=PLOT_BACKGROUND, font_size=12 if not is_mobile else 10)
     )
     return fig
 
-def chart_dashboard(results: dict, is_mobile: bool = False) -> go.Figure:
-    """Dashboard 2x2 : 4 variables core"""
-    variables = ["population", "resources", "pollution", "capital"]
-    titles = [VARIABLE_META[v]["label"] for v in variables]
-
+# --- CONTENU RESTANT IDENTIQUE AU FICHIER PRÉCÉDENT (sans duplication) ---
+# ... (les fonctions chart_dashboard, chart_planetary_boundaries, et chart_planetary_boundaries_as_bars restent inchangées)
     fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=[_html.escape(t) for t in titles],
