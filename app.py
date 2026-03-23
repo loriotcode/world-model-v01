@@ -1,16 +1,18 @@
 """
 app.py — World Model v0.1
 Simulation World3 + Limites Planétaires + Analyse Claude AI
+Thème : Ivoire/Papier recyclé avec graphiques bleu clair pâle
 """
+
 import os
 import sys
 import time
 import logging
 import html as _html
+import re
 from pathlib import Path
 import streamlit as st
 import pandas as pd
-from streamlit_js_eval import get_page_width
 
 # --- Configuration initiale ---
 port = int(os.environ.get('PORT', 8080))
@@ -28,33 +30,21 @@ from utils.logging_config import configure_logging
 # --- Logging ---
 configure_logging()
 
-# --- Détection mobile et orientation ---
-if get_page_width() < 768:
-    st.session_state.is_mobile = True
-else:
-    st.session_state.is_mobile = False
+# --- Détection mobile (solution native sécurisée) ---
+if "is_mobile" not in st.session_state:
+    user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
+    # Validation stricte du user_agent pour éviter les injections
+    if not re.match(r'^[a-zA-Z0-9\s\-\(\)\.,;:!?/]+$', user_agent):
+        user_agent = ""
+    st.session_state.is_mobile = bool(re.search(r"(android|ios|iphone|ipad|mobile)", user_agent.lower()))
 
-# --- Détection orientation (portrait/paysage) ---
-if st.session_state.get("is_mobile", False):
-    js_code = """
-    <script>
-        function getOrientation() {
-            if (window.innerHeight > window.innerWidth) {
-                return "portrait";
-            } else {
-                return "landscape";
-            }
-        }
-        window.parent.postMessage({
-            type: "streamlit:orientation",
-            value: getOrientation()
-        }, "*");
-    </script>
-    """
-    st.components.v1.html(f"<div>{js_code}</div>", height=0)
-    st.session_state.orientation = st.experimental_get_query_params().get("orientation", ["portrait"])[0]
+# --- Initialisation des états de session ---
+if "mobile_guidance_shown" not in st.session_state:
+    st.session_state.mobile_guidance_shown = False
+if "last_analysis" not in st.session_state:
+    st.session_state.last_analysis = []
 
-# --- CSS personnalisé (thème ivoire/papier recyclé) ---
+# --- CSS personnalisé (thème ivoire/bleu clair) ---
 st.markdown("""
 <style>
   /* Fond global — ivoire clair */
@@ -134,27 +124,6 @@ st.markdown("""
     margin-bottom: 16px;
     border-left: 3px solid #d68910;
   }
-  /* Modal de guidage */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.7);
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 90%;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -180,42 +149,18 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- Modal de guidage mobile (1ère visite) ---
-if st.session_state.get("is_mobile", False) and not st.session_state.get("mobile_guidance_shown", False):
-    st.markdown(
-        """
-        <div class="modal-overlay" id="modal">
-            <div class="modal-content">
-                <h3 style="color: #d68910; margin-top: 0;">📱 Bienvenue sur World Model</h3>
-                <p style="color: #2d3748;">
-                Pour une expérience optimale :
-                <ul style="text-align: left; margin: 10px 0 0 20px;">
-                    <li>Tournez votre appareil en <b>mode paysage</b> pour voir tous les graphiques.</li>
-                    <li>En mode portrait, sélectionnez une variable à la fois.</li>
-                    <li>Utilisez deux doigts pour zoomer sur les courbes.</li>
-                </ul>
-                </p>
-                <button onclick="document.getElementById('modal').style.display='none';"
-                        style="background: #d68910; color: white; border: none;
-                               padding: 10px 20px; border-radius: 5px; margin-top: 15px;
-                               font-weight: bold; cursor: pointer;">
-                    Compris !
-                </button>
-            </div>
-        </div>
-        <script>
-            document.querySelector("button").addEventListener("click", function() {
-                window.parent.postMessage({
-                    type: "streamlit:setComponentValue",
-                    value: true,
-                    widgetID: "mobile_guidance_shown",
-                    widgetName: "mobile_guidance_shown"
-                }, "*");
-            });
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+# --- Modal de guidage mobile (version Streamlit native sécurisée) ---
+if st.session_state.get("is_mobile", False) and not st.session_state.mobile_guidance_shown:
+    with st.expander("📱 Conseils pour mobile (cliquez pour ouvrir)", expanded=True):
+        st.warning("""
+        Pour une expérience optimale :
+        - Tournez votre appareil en **mode paysage**.
+        - Sélectionnez une variable à la fois en mode portrait.
+        - Utilisez deux doigts pour zoomer.
+        """)
+        if st.button("Compris !"):
+            st.session_state.mobile_guidance_shown = True
+            st.rerun()
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -283,44 +228,34 @@ if page == "🏠 Vue d'ensemble":
     # --- TRAJECTOIRES (adaptatif portrait/paysage) ---
     st.markdown("### Trajectoires — 4 variables core")
     if st.session_state.get("is_mobile", False):
-        orientation = st.session_state.get("orientation", "portrait")
-        if orientation == "portrait":
-            st.markdown("""
-            <div class="graph-guide">
-            📱 <b>Conseil</b> : Tournez votre appareil en mode paysage pour une meilleure visualisation,
-            ou sélectionnez une variable ci-dessous.
-            </div>
-            """, unsafe_allow_html=True)
-            selected_var = st.selectbox(
-                "Variable à afficher (mode portrait)",
-                options=["population", "resources", "pollution", "capital"],
-                format_func=lambda x: {
-                    "population": "Population (Md)",
-                    "resources": "Ressources (%)",
-                    "pollution": "Pollution",
-                    "capital": "Capital industriel"
-                }[x]
-            )
-            st.plotly_chart(
-                chart_trajectories(results, selected_var),
-                use_container_width=True,
-                config={
-                    "responsive": True,
-                    "displayModeBar": False,
-                    "scrollZoom": True
-                },
-                height=350
-            )
-        else:  # paysage
-            st.plotly_chart(
-                chart_dashboard(results),
-                use_container_width=True,
-                config={"responsive": True},
-                height=500
-            )
+        st.markdown("""
+        <div class="graph-guide">
+        📱 <b>Conseil</b> : Tournez votre appareil en mode paysage pour une meilleure visualisation,
+        ou sélectionnez une variable ci-dessous.
+        </div>
+        """, unsafe_allow_html=True)
+        selected_var = st.selectbox(
+            "Variable à afficher (mode portrait)",
+            options=["population", "resources", "pollution", "capital"],
+            format_func=lambda x: {
+                "population": "Population (Md)",
+                "resources": "Ressources (%)",
+                "pollution": "Pollution",
+                "capital": "Capital industriel"
+            }[x]
+        )
+        st.plotly_chart(
+            chart_trajectories(results, selected_var, is_mobile=st.session_state.get("is_mobile", False)),
+            use_container_width=True,
+            config={
+                "responsive": True,
+                "displayModeBar": False,
+                "scrollZoom": True
+            }
+        )
     else:  # desktop
         st.plotly_chart(
-            chart_dashboard(results),
+            chart_dashboard(results, is_mobile=st.session_state.get("is_mobile", False)),
             use_container_width=True,
             config={"responsive": True}
         )
@@ -376,30 +311,20 @@ elif page == "🌐 Limites planétaires":
 
     # Graphique adaptatif
     if st.session_state.get("is_mobile", False):
-        orientation = st.session_state.get("orientation", "portrait")
-        if orientation == "portrait":
-            st.markdown("""
-            <div class="graph-guide">
-            📱 <b>Conseil</b> : Tournez votre appareil en mode paysage pour voir le graphique radar,
-            ou consultez le barplot ci-dessous.
-            </div>
-            """, unsafe_allow_html=True)
-            st.plotly_chart(
-                chart_planetary_boundaries_as_bars(boundaries),
-                use_container_width=True,
-                config={"responsive": True, "displayModeBar": False},
-                height=400
-            )
-        else:
-            st.plotly_chart(
-                chart_planetary_boundaries(boundaries),
-                use_container_width=True,
-                config={"responsive": True},
-                height=500
-            )
+        st.markdown("""
+        <div class="graph-guide">
+        📱 <b>Conseil</b> : Tournez votre appareil en mode paysage pour voir le graphique radar,
+        ou consultez le barplot ci-dessous.
+        </div>
+        """, unsafe_allow_html=True)
+        st.plotly_chart(
+            chart_planetary_boundaries_as_bars(boundaries, is_mobile=st.session_state.get("is_mobile", False)),
+            use_container_width=True,
+            config={"responsive": True, "displayModeBar": False}
+        )
     else:
         st.plotly_chart(
-            chart_planetary_boundaries(boundaries),
+            chart_planetary_boundaries(boundaries, is_mobile=st.session_state.get("is_mobile", False)),
             use_container_width=True,
             config={"responsive": True}
         )
@@ -461,16 +386,16 @@ elif page == "🤖 Analyse IA":
                 f"<div class='ai-output'>{analysis}</div>",
                 unsafe_allow_html=True
             )
-            # Mise à jour de l'historique
-            if "last_analysis" not in st.session_state:
-                st.session_state.last_analysis = []
+            # Mise à jour de l'historique (limité à 10 entrées)
+            if len(st.session_state.last_analysis) >= 10:
+                st.session_state.last_analysis.pop(0)
             st.session_state.last_analysis.append({
                 "scenario": selected_scenario,
                 "time": time.strftime("%H:%M:%S")
             })
 
     # Historique des analyses
-    if "last_analysis" in st.session_state and st.session_state.last_analysis:
+    if st.session_state.last_analysis:
         st.markdown("---")
         st.markdown("### 📊 Historique des analyses")
         for i, analysis in enumerate(reversed(st.session_state.last_analysis[-3:])):  # 3 dernières
@@ -518,19 +443,11 @@ elif page == "📈 Scénarios":
         st.warning("Sélectionnez au moins un scénario.")
     else:
         filtered = {k: v for k, v in results.items() if k in scenarios_shown}
-        if st.session_state.get("is_mobile", False):
-            st.plotly_chart(
-                chart_trajectories(filtered, variable),
-                use_container_width=True,
-                config={"responsive": True, "displayModeBar": False},
-                height=400
-            )
-        else:
-            st.plotly_chart(
-                chart_trajectories(filtered, variable),
-                use_container_width=True,
-                config={"responsive": True}
-            )
+        st.plotly_chart(
+            chart_trajectories(filtered, variable, is_mobile=st.session_state.get("is_mobile", False)),
+            use_container_width=True,
+            config={"responsive": True}
+        )
 
     # Tableau comparatif
     st.markdown("---")
