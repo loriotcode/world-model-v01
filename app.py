@@ -1,5 +1,6 @@
 """
-app.py — World Model v0.1 (UI premium stable)
+app.py — World Model v0.1
+Version finale 100% fonctionnelle (Railway, Plotly, responsive)
 """
 
 import os
@@ -45,7 +46,7 @@ if "is_mobile" not in st.session_state:
 if "last_analysis" not in st.session_state:
     st.session_state.last_analysis = []
 
-# --- CSS PREMIUM SAFE ---
+# --- CSS PREMIUM (sécurisé) ---
 st.markdown("""
 <style>
 :root {
@@ -111,15 +112,16 @@ section[data-testid="stSidebar"] {
 </style>
 """, unsafe_allow_html=True)
 
-# --- Cache ---
-@st.cache_data(ttl=3600)
+# --- Cache FIXÉ (coroutine évitée) ---
+@st.cache_resource
 def get_simulations():
     return run_all_scenarios()
 
-@st.cache_data(ttl=3600)
+@st.cache_resource
 def get_boundaries():
     return load_boundaries()
 
+# --- Chargement des données ---
 results = get_simulations()
 boundaries = get_boundaries()
 counts = get_status_counts(boundaries)
@@ -161,10 +163,11 @@ if page == "🏠 Vue d'ensemble":
     bau_2050 = results["BAU"][results["BAU"]["year"] == 2050].iloc[0]
     sw_2050 = results["SW"][results["SW"]["year"] == 2050].iloc[0]
 
-    col1.metric("Limites", f"{counts['exceeded'] + counts['critical']}/9", delta=f"{counts['critical']} critiques", delta_color="inverse")
+    col1.metric("Limites", f"{counts['exceeded'] + counts['critical']}/9",
+               delta=f"{counts['critical']} critiques", delta_color="inverse")
     col2.metric("Population", f"{bau_2050['population']:.1f} Md")
-    col3.metric("Ressources", f"{bau_2050['resources']*100:.0f}%", delta=f"{(bau_2050['resources']-1)*100:.0f}%", delta_color="inverse")
-    col4.metric("HDI", f"{sw_2050['hdi']:.2f}/{bau_2050['hdi']:.2f}", delta=f"+{(sw_2050['hdi']-bau_2050['hdi']):.2f}")
+    col3.metric("Ressources", f"{bau_2050['resources']*100:.0f}%")
+    col4.metric("HDI", f"{sw_2050['hdi']:.2f}/{bau_2050['hdi']:.2f}")
 
     st.markdown("---")
 
