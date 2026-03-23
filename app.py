@@ -14,13 +14,12 @@ from pathlib import Path
 import streamlit as st
 import pandas as pd
 
-# --- Configuration initiale ---
-port = int(os.environ.get('PORT', 8080))
+# --- Configuration du chemin racine (CRUCIAL pour Railway et local) ---
 _PROJECT_ROOT = str(Path(__file__).resolve().parent)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-# --- Imports locaux ---
+# --- Imports locaux (après configuration du chemin) ---
 from models.world3 import run_all_scenarios, SCENARIOS
 from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS
 from utils.charts import chart_trajectories, chart_dashboard, chart_planetary_boundaries, chart_planetary_boundaries_as_bars
@@ -33,7 +32,6 @@ configure_logging()
 # --- Détection mobile (solution native 100% Streamlit, sans dépendance externe) ---
 if "is_mobile" not in st.session_state:
     try:
-        # Récupération sécurisée de l'user-agent
         user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
         if isinstance(user_agent, str) and re.match(r'^[a-zA-Z0-9\s\-\(\)\.,;:!?/]+$', user_agent):
             st.session_state.is_mobile = bool(re.search(r"(android|ios|iphone|ipad|mobile)", user_agent.lower()))
