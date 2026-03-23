@@ -32,11 +32,15 @@ configure_logging()
 
 # --- Détection mobile (solution native sécurisée) ---
 if "is_mobile" not in st.session_state:
-    user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
-    # Validation stricte du user_agent pour éviter les injections
-    if not re.match(r'^[a-zA-Z0-9\s\-\(\)\.,;:!?/]+$', user_agent):
-        user_agent = ""
-    st.session_state.is_mobile = bool(re.search(r"(android|ios|iphone|ipad|mobile)", user_agent.lower()))
+    try:
+        user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
+        if isinstance(user_agent, str) and re.match(r'^[a-zA-Z0-9\s\-\(\)\.,;:!?/]+$', user_agent):
+            st.session_state.is_mobile = bool(re.search(r"(android|ios|iphone|ipad|mobile)", user_agent.lower()))
+        else:
+            st.session_state.is_mobile = False
+    except Exception as e:
+        st.session_state.is_mobile = False
+        logging.warning(f"Erreur détection mobile: {e}")
 
 # --- Initialisation des états de session ---
 if "mobile_guidance_shown" not in st.session_state:
@@ -149,7 +153,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- Modal de guidage mobile (version Streamlit native sécurisée) ---
+# --- Guidage mobile (version Streamlit native) ---
 if st.session_state.get("is_mobile", False) and not st.session_state.mobile_guidance_shown:
     with st.expander("📱 Conseils pour mobile (cliquez pour ouvrir)", expanded=True):
         st.warning("""
@@ -225,7 +229,7 @@ if page == "🏠 Vue d'ensemble":
 
     st.markdown("---")
 
-    # --- TRAJECTOIRES (adaptatif portrait/paysage) ---
+    # --- TRAJECTOIRES (adaptatif) ---
     st.markdown("### Trajectoires — 4 variables core")
     if st.session_state.get("is_mobile", False):
         st.markdown("""
@@ -293,7 +297,7 @@ if page == "🏠 Vue d'ensemble":
     </div>
     """, unsafe_allow_html=True)
 
-# --- PAGE : LIMITE PLANÉTAIRES (adaptatif) ---
+# --- PAGE : LIMITE PLANÉTAIRES ---
 elif page == "🌐 Limites planétaires":
     st.markdown("## 🌐 Les 9 limites planétaires")
     st.markdown("*Rockström et al. (2009) · Stockholm Resilience Centre (2023)*")
