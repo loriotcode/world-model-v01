@@ -56,15 +56,16 @@ def chart_trajectories(results, variable, is_mobile=False):
 
     fig.add_vline(x=2026, line_dash="dot", line_color=AXIS_COLOR)
 
-fig.update_layout(
-    title="Vue globale",
-    paper_bgcolor=BACKGROUND_COLOR,
-    plot_bgcolor=PLOT_BACKGROUND,
-    font=dict(color=TEXT_COLOR, size=11 if is_mobile else 13),
-    height=700 if is_mobile else 600,
-    margin=dict(l=40, r=20, t=60, b=40),
-    legend=dict(orientation="h", y=-0.15),
-)
+    # BUG 1 CORRIGÉ : update_layout et return étaient hors de la fonction
+    fig.update_layout(
+        title="Vue globale",
+        paper_bgcolor=BACKGROUND_COLOR,
+        plot_bgcolor=PLOT_BACKGROUND,
+        font=dict(color=TEXT_COLOR, size=11 if is_mobile else 13),
+        height=700 if is_mobile else 600,
+        margin=dict(l=40, r=20, t=60, b=40),
+        legend=dict(orientation="h", y=-0.15),
+    )
 
     return fig
 
@@ -76,13 +77,13 @@ def chart_dashboard(results, is_mobile=False):
     variables = ["population", "resources", "pollution", "capital"]
     titles = [VARIABLE_META[v]["label"] for v in variables]
 
-if is_mobile:
-    fig = make_subplots(rows=4, cols=1, subplot_titles=titles)
-    positions = [(1,1),(2,1),(3,1),(4,1)]
-else:
-    fig = make_subplots(rows=2, cols=2, subplot_titles=titles)
-    positions = [(1,1),(1,2),(2,1),(2,2)]
-    positions = [(1, 1), (1, 2), (2, 1), (2, 2)]
+    # BUG 2 CORRIGÉ : if/else et tout le bloc étaient hors de la fonction
+    if is_mobile:
+        fig = make_subplots(rows=4, cols=1, subplot_titles=titles)
+        positions = [(1, 1), (2, 1), (3, 1), (4, 1)]
+    else:
+        fig = make_subplots(rows=2, cols=2, subplot_titles=titles)
+        positions = [(1, 1), (1, 2), (2, 1), (2, 2)]
 
     for var, (r, c) in zip(variables, positions):
         for key in results:
