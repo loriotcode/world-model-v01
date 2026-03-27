@@ -72,6 +72,9 @@ for _k, _sc in SCENARIOS.items():
 # Whitelist pour validation externe
 VALID_SCENARIO_KEYS = set(SCENARIOS.keys())
 
+# Année à partir de laquelle les scénarios divergent de BAU
+BIFURCATION_YEAR = 2026
+
 # ── Constantes calibrées ─────────────────────────────────────────────────────
 
 INITIAL_CONDITIONS = {
@@ -142,7 +145,11 @@ class World3Simulation:
         return -(base_rate * pop_factor * cap_factor / efficiency * depletion_mod)
 
     def run(self, start: int = 1970, end: int = 2100) -> pd.DataFrame:
-        """Lance la simulation, retourne DataFrame annuel."""
+        """Lance la simulation, retourne DataFrame annuel.
+
+        Avant BIFURCATION_YEAR, tous les scénarios suivent les paramètres BAU.
+        La divergence commence à partir de BIFURCATION_YEAR.
+        """
         # Validation plage temporelle
         if not (1900 <= start < end <= 2200):
             raise ValueError(f"Plage temporelle invalide : {start}-{end}")
@@ -154,9 +161,15 @@ class World3Simulation:
         pol = INITIAL_CONDITIONS["pollution"]
         res = INITIAL_CONDITIONS["resources"]
 
+        _bau_params = SCENARIOS["BAU"]["params"]
+        _sc_params  = self.scenario["params"]
+
         records = []
 
         for year in years:
+            # Avant la bifurcation, tous les scénarios suivent BAU
+            self.p = _sc_params if year >= BIFURCATION_YEAR else _bau_params
+
             # Clamp valeurs
             cap = max(0.01, min(1.5, cap))
             pol = max(0.0,  min(2.0, pol))

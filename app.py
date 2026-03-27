@@ -1,234 +1,385 @@
 """
 app.py — World Model v0.1
-Version finale 100% fonctionnelle (Railway, Plotly, responsive)
+Landscape-first smartphone · thème warm original
+Sécurité / robustesse / économie v2
 """
 
-import os
+import re
 import sys
 import time
 import html as _html
+import logging
 from pathlib import Path
 
 import streamlit as st
-import pandas as pd
 
 st.set_page_config(
     page_title="World Model v0.1",
     page_icon="🌍",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-_PROJECT_ROOT = str(Path(__file__).resolve().parent)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+# ─── PATH ────────────────────────────────────────────────────────────────────
+_ROOT = str(Path(__file__).resolve().parent)
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 from models.world3 import run_all_scenarios, SCENARIOS
 from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS
-from utils.charts import (
-    chart_trajectories,
-    chart_dashboard,
-    chart_planetary_boundaries,
-    chart_planetary_boundaries_as_bars,
-)
+from utils.charts import chart_trajectories, chart_planetary_boundaries_as_bars
 from services.claude_api import analyse_scenario, extract_summary
 from utils.logging_config import configure_logging
 
 configure_logging()
+log = logging.getLogger(__name__)
 
-if "is_mobile" not in st.session_state:
-    st.session_state.is_mobile = False
-if "last_analysis" not in st.session_state:
-    st.session_state.last_analysis = []
+# ─── SESSION STATE ────────────────────────────────────────────────────────────
+_SS_DEFAULTS = {"last_api_call": 0.0, "last_analysis": "", "last_scenario": ""}
+for k, v in _SS_DEFAULTS.items():
+    st.session_state.setdefault(k, v)
 
-# Config Plotly : simple, sans zoom ni pan
-PLOTLY_CONFIG = {
-    "responsive": True,
-    "displayModeBar": True,
-    "modeBarButtonsToRemove": [
-        "zoom2d", "pan2d", "select2d", "lasso2d",
-        "zoomIn2d", "zoomOut2d", "autoScale2d",
-        "hoverClosestCartesian", "hoverCompareCartesian",
-        "toggleSpikelines",
-    ],
-    "modeBarButtonsToAdd": [],
-    "displaylogo": False,
-    "scrollZoom": False,
-    "doubleClick": False,
-}
+# ─── CONSTANTES ──────────────────────────────────────────────────────────────
+COOLDOWN_S   = 10
+CHART_LAYOUT = dict(
+    height  = 230,
+    margin  = dict(l=30, r=10, t=20, b=30),
+    font    = dict(size=9),
+    legend  = dict(orientation="h", yanchor="bottom", y=1.02,
+                   xanchor="right", x=1, font=dict(size=9)),
+)
+PLOTLY_CFG = dict(responsive=True, displayModeBar=False,
+                  scrollZoom=False, doubleClick=False, displaylogo=False)
 
+# Source unique des couleurs de statut
+STATUS_COLORS = {"safe": "#4a7c59", "exceeded": "#d68910", "critical": "#a8323e"}
+
+# Whitelist des variables (sécurité)
+VARIABLES = ["population", "resources", "pollution", "capital",
+             "life_expectancy", "food_per_capita", "hdi"]
+
+# ─── HELPERS ─────────────────────────────────────────────────────────────────
+_COLOR_RE  = re.compile(r'^#[0-9a-fA-F]{3,6}$')
+_HTML_TAGS = re.compile(r'<[^>]+>')
+
+def _safe_html(value) -> str:
+    return _html.escape(str(value))
+
+def _safe_color(color: str, fallback: str = "#888888") -> str:
+    """Valide un code couleur hex avant injection dans un attribut style."""
+    c = str(color).strip()
+    return c if _COLOR_RE.match(c) else fallback
+
+def _strip_html(text: str) -> str:
+    """Supprime les balises HTML d'un texte (output LLM) avant affichage unsafe."""
+    return _HTML_TAGS.sub("", str(text))
+
+def _render_chart(fig):
+    fig.update_layout(**CHART_LAYOUT)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG)
+
+def _get_year_row(scenario: str, year: int):
+    df = results.get(scenario)
+    if df is None or df.empty:
+        return None
+    rows = df[df["year"] == year]
+    return rows.iloc[0] if not rows.empty else None
+
+# ─── CHARGEMENT DONNÉES ───────────────────────────────────────────────────────
+@st.cache_resource
+def _load_simulations():
+    try:
+        return run_all_scenarios()
+    except Exception:
+        log.exception("Erreur chargement simulations")
+        return {}
+
+@st.cache_resource
+def _load_boundaries():
+    try:
+        return load_boundaries()
+    except Exception:
+        log.exception("Erreur chargement limites planétaires")
+        return []
+
+results    = _load_simulations()
+boundaries = _load_boundaries()
+counts     = get_status_counts(boundaries) if boundaries else {"safe": 0, "exceeded": 0, "critical": 0}
+
+if not results:
+    st.error("Impossible de charger les simulations. Vérifiez les logs.")
+    st.stop()
+
+bau_2050 = _get_year_row("BAU", 2050)
+sw_2050  = _get_year_row("SW",  2050)
+
+# ─── CSS + JS ────────────────────────────────────────────────────────────────
 st.markdown("""
+<script>
+(function(){
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch(function(){});
+  }
+  function checkOrientation() {
+    var el = document.getElementById('wm-overlay');
+    if (el) el.style.display = (window.innerHeight > window.innerWidth) ? 'flex' : 'none';
+  }
+  ['resize', 'orientationchange'].forEach(function(ev){
+    window.addEventListener(ev, function(){ setTimeout(checkOrientation, 300); });
+  });
+  setTimeout(checkOrientation, 600);
+})();
+</script>
+
+<div id="wm-overlay" style="display:none;position:fixed;inset:0;z-index:99999;
+  background:rgba(248,245,240,0.97);flex-direction:column;align-items:center;
+  justify-content:center;font-family:sans-serif;text-align:center;padding:30px;">
+  <div style="font-size:48px;margin-bottom:16px;animation:tilt 2s ease-in-out infinite;">📱</div>
+  <div style="font-size:1.1em;font-weight:700;color:#2d3748;">Rotation requise</div>
+  <div style="font-size:0.85em;color:#718096;margin-top:6px;">Mode paysage uniquement</div>
+</div>
+
 <style>
+@keyframes tilt {
+  0%,100% { transform:rotate(0deg); }
+  30%,70%  { transform:rotate(-90deg); }
+}
+
 :root {
-  --bg: #f8f5f0;
-  --panel: #ffffff;
+  --bg:     #f8f5f0;
+  --panel:  #ffffff;
   --border: #d1c7b7;
-  --text: #2d3748;
+  --text:   #2d3748;
+  --muted:  #718096;
+  --safe:   #4a7c59;
+  --warn:   #d68910;
+  --crit:   #a8323e;
+  --accent: #4a7c59;
 }
-.stApp { background-color: var(--bg); color: var(--text); }
-section[data-testid="stSidebar"] {
-  background-color: #f0eae2;
-  border-right: 1px solid var(--border);
+
+section[data-testid="stSidebar"],
+[data-testid="collapsedControl"] { display:none !important; }
+
+.stApp { background:var(--bg) !important; color:var(--text); }
+
+.block-container { padding:0.4rem 0.7rem 0.8rem !important; max-width:100% !important; }
+
+.wm-header {
+  display:flex; align-items:center; gap:8px;
+  padding:5px 0; border-bottom:1px solid var(--border); margin-bottom:6px;
 }
-.hero {
-  background: linear-gradient(135deg, #f9f7f3, #f0eae2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 26px;
-  margin-bottom: 20px;
-  text-align: center;
+.wm-header h1 { font-size:0.95em; font-weight:700; margin:0; color:var(--text); }
+.wm-header .sub { font-size:0.7em; color:var(--muted); margin-left:auto; }
+
+.wm-metrics {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:7px;
 }
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+.wm-metric {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:6px 7px; text-align:center;
 }
-.status-card {
-  padding: 10px 14px;
-  border-radius: 10px;
-  margin: 6px 0;
-  background: #f9f7f3;
-  border-left: 4px solid var(--border);
+.wm-metric .val   { font-size:1.1em; font-weight:700; color:var(--accent); }
+.wm-metric .lbl   { font-size:0.63em; color:var(--muted); margin-top:1px; }
+.wm-metric .delta { font-size:0.58em; color:var(--warn); margin-top:1px; }
+
+.stTabs [data-baseweb="tab-list"] {
+  gap:2px; background:#f0eae2; border-radius:8px; padding:3px; margin-bottom:7px;
 }
-.status-safe { border-left-color: #4a7c59; }
-.status-exceeded { border-left-color: #d68910; }
-.status-critical { border-left-color: #a8323e; }
-.metric-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
+.stTabs [data-baseweb="tab"] {
+  border-radius:6px; padding:4px 10px; font-size:0.76em;
+  font-weight:600; color:var(--muted); background:transparent; border:none;
 }
-.footer {
-  margin-top: 40px;
-  padding-top: 10px;
-  font-size: 0.8em;
-  color: #718096;
-  text-align: center;
+.stTabs [aria-selected="true"] { background:var(--panel) !important; color:var(--accent) !important; }
+
+.status-row   { display:flex; flex-wrap:wrap; gap:5px; margin:5px 0; }
+.status-pill  { padding:3px 9px; border-radius:20px; font-size:0.7em; font-weight:600; }
+.pill-safe     { background:rgba(74,124,89,.12);  color:var(--safe); border:1px solid var(--safe); }
+.pill-exceeded { background:rgba(214,137,16,.12); color:var(--warn); border:1px solid var(--warn); }
+.pill-critical { background:rgba(168,50,62,.12);  color:var(--crit); border:1px solid var(--crit); }
+
+.bound-item {
+  display:flex; align-items:center; gap:8px;
+  padding:4px 0; border-bottom:1px solid var(--border); font-size:0.78em;
 }
+.bound-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+.ia-result {
+  background:var(--panel); border:1px solid var(--border); border-radius:10px;
+  padding:11px 13px; font-size:0.81em; line-height:1.6; color:var(--text);
+  max-height:255px; overflow-y:auto;
+}
+.ia-empty { font-size:0.8em; color:var(--muted); padding:10px 0; }
+
+.sc-legend { display:flex; align-items:center; gap:5px; font-size:0.7em; }
+.sc-dot    { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+.stSelectbox label, .stMultiSelect label { font-size:0.76em !important; color:var(--muted) !important; }
+div[data-baseweb="select"] { background:var(--panel) !important; border-color:var(--border) !important; }
+
+.stButton button {
+  background:var(--accent) !important; color:#fff !important;
+  font-weight:700; border-radius:7px; border:none;
+  font-size:0.83em; padding:6px 16px; width:100%;
+}
+.stButton button:disabled { opacity:0.45 !important; }
+
+.wm-footer {
+  margin-top:8px; font-size:0.66em; color:var(--muted);
+  text-align:center; border-top:1px solid var(--border); padding-top:5px;
+}
+
+::-webkit-scrollbar { width:3px; height:3px; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_resource
-def get_simulations():
-    return run_all_scenarios()
+# ─── HEADER ──────────────────────────────────────────────────────────────────
+st.markdown(
+    "<div class='wm-header'><span>🌍</span><h1>World Model v0.1</h1>"
+    "<span class='sub'>2026 · Simondon SW</span></div>",
+    unsafe_allow_html=True,
+)
 
-@st.cache_resource
-def get_boundaries():
-    return load_boundaries()
+# ─── MÉTRIQUES ───────────────────────────────────────────────────────────────
+pop_val = f"{bau_2050['population']:.1f}" if bau_2050 is not None else "—"
+res_val = f"{bau_2050['resources']*100:.0f}%" if bau_2050 is not None else "—"
+hdi_sw  = f"{sw_2050['hdi']:.2f}"  if sw_2050  is not None else "—"
+hdi_bau = f"{bau_2050['hdi']:.2f}" if bau_2050 is not None else "—"
 
-results = get_simulations()
-boundaries = get_boundaries()
-counts = get_status_counts(boundaries)
+st.markdown(f"""
+<div class="wm-metrics">
+  <div class="wm-metric">
+    <div class="val">{counts['exceeded'] + counts['critical']}/9</div>
+    <div class="lbl">Limites</div>
+    <div class="delta">{counts['critical']} crit.</div>
+  </div>
+  <div class="wm-metric">
+    <div class="val">{_safe_html(pop_val)}</div>
+    <div class="lbl">Pop. 2050 Md</div>
+    <div class="delta">BAU</div>
+  </div>
+  <div class="wm-metric">
+    <div class="val">{_safe_html(res_val)}</div>
+    <div class="lbl">Ressources</div>
+    <div class="delta">BAU 2050</div>
+  </div>
+  <div class="wm-metric">
+    <div class="val">{_safe_html(hdi_sw)}</div>
+    <div class="lbl">HDI SW</div>
+    <div class="delta">vs {_safe_html(hdi_bau)}</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-# --- SIDEBAR ---
-with st.sidebar:
-    st.markdown("## 🌍 World Model")
-    st.toggle("Mode mobile", key="is_mobile")
-    st.divider()
+# ─── NAVIGATION ──────────────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4 = st.tabs(["🏠 Aperçu", "📈 Scénarios", "🌐 Limites", "🤖 IA"])
 
-    page = st.radio(
-        "Navigation",
-        ["🏠 Vue d'ensemble", "📈 Scénarios", "🌐 Limites planétaires", "🤖 Analyse IA"],
-        label_visibility="collapsed"
-    )
+# ══ TAB 1 ════════════════════════════════════════════════════════════════════
+with tab1:
+    var_home = st.selectbox("Variable", VARIABLES[:5], key="v_home",
+                            label_visibility="collapsed")
+    _render_chart(chart_trajectories(results, var_home))
 
-    st.divider()
-    st.markdown("**Scénarios**")
-    for key, sc in SCENARIOS.items():
-        st.markdown(
-            f"<div style='display:flex;gap:8px;align-items:center'>"
-            f"<div style='width:10px;height:10px;border-radius:50%;background:{sc['color']}'></div>"
-            f"<span style='font-size:0.85em'>{_html.escape(sc['label'])}</span>"
-            f"</div>",
-            unsafe_allow_html=True
+    cols = st.columns(len(SCENARIOS))
+    for col, (_, sc) in zip(cols, SCENARIOS.items()):
+        col.markdown(
+            f"<div class='sc-legend'>"
+            f"<div class='sc-dot' style='background:{_safe_color(sc['color'])}'></div>"
+            f"{_safe_html(sc['label'])}</div>",
+            unsafe_allow_html=True,
         )
 
-# --- PAGE : HOME ---
-if page == "🏠 Vue d'ensemble":
-    st.markdown("""
-    <div class="hero">
-        <h2>🌍 World Model v0.1</h2>
-        <p>Simulation systémique · World3 · Limites planétaires · IA</p>
-    </div>
-    """, unsafe_allow_html=True)
+# ══ TAB 2 ════════════════════════════════════════════════════════════════════
+with tab2:
+    c1, c2 = st.columns(2)
+    with c1:
+        variable = st.selectbox("Variable", VARIABLES, key="v_sc",
+                                label_visibility="collapsed")
+    with c2:
+        sc_keys     = list(SCENARIOS.keys())
+        selected_sc = st.multiselect("Scénarios", sc_keys, default=sc_keys,
+                                     key="sc_sel", label_visibility="collapsed")
+        selected_sc = [k for k in selected_sc if k in SCENARIOS]  # whitelist
 
-    col1, col2, col3, col4 = st.columns(4)
-
-    bau_2050 = results["BAU"][results["BAU"]["year"] == 2050].iloc[0]
-    sw_2050 = results["SW"][results["SW"]["year"] == 2050].iloc[0]
-
-    col1.metric("Limites", f"{counts['exceeded'] + counts['critical']}/9",
-               delta=f"{counts['critical']} critiques", delta_color="inverse")
-    col2.metric("Population", f"{bau_2050['population']:.1f} Md")
-    col3.metric("Ressources", f"{bau_2050['resources']*100:.0f}%")
-    col4.metric("HDI", f"{sw_2050['hdi']:.2f}/{bau_2050['hdi']:.2f}")
-
-    st.markdown("---")
-
-    if st.session_state.is_mobile:
-        var = st.selectbox("Variable", ["population", "resources", "pollution", "capital"])
-        fig = chart_trajectories(results, var, is_mobile=True)
+    if selected_sc:
+        _render_chart(chart_trajectories(
+            {k: results[k] for k in selected_sc}, variable,
+        ))
     else:
-        fig = chart_dashboard(results, is_mobile=False)
+        st.info("Sélectionne au moins un scénario.")
 
-    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+# ══ TAB 3 ════════════════════════════════════════════════════════════════════
+with tab3:
+    st.markdown(f"""
+    <div class="status-row">
+      <span class="status-pill pill-safe">✓ {counts['safe']} Safe</span>
+      <span class="status-pill pill-exceeded">⚠ {counts['exceeded']} Dépassée</span>
+      <span class="status-pill pill-critical">✗ {counts['critical']} Critique</span>
+    </div>""", unsafe_allow_html=True)
 
-# --- PAGE : LIMITES ---
-elif page == "🌐 Limites planétaires":
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Safe", counts["safe"])
-    col2.metric("Exceeded", counts["exceeded"])
-    col3.metric("Critical", counts["critical"])
+    if boundaries:
+        fig = chart_planetary_boundaries_as_bars(boundaries)
+        fig.update_layout(height=210, margin=dict(l=10, r=10, t=12, b=8), font=dict(size=8))
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG)
 
-    # Barres sur desktop ET mobile — radar supprimé (illisible)
-    fig = chart_planetary_boundaries_as_bars(boundaries, is_mobile=st.session_state.is_mobile)
-    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        for b in boundaries:
+            label, _ = STATUS_LABELS[b["status"]]
+            color = _safe_color(STATUS_COLORS.get(b["status"], "#888888"))
+            st.markdown(
+                f"<div class='bound-item'>"
+                f"<div class='bound-dot' style='background:{color}'></div>"
+                f"<span>{_safe_html(b['name'])}</span>"
+                f"<span style='margin-left:auto;color:{color}'>{_safe_html(label)}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.warning("Données limites planétaires indisponibles.")
 
-    for b in boundaries:
-        label, _ = STATUS_LABELS[b["status"]]
-        css = f"status-{b['status']}"
+# ══ TAB 4 ════════════════════════════════════════════════════════════════════
+with tab4:
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        ia_sc = st.selectbox("Scénario", list(SCENARIOS.keys()), key="ia_sc",
+                             label_visibility="collapsed")
+    with c2:
+        now      = time.time()
+        try:
+            _last_call = float(st.session_state.last_api_call)
+        except (TypeError, ValueError):
+            _last_call = 0.0
+            st.session_state.last_api_call = 0.0
+        cooldown = now - _last_call < COOLDOWN_S
+        btn      = st.button("Analyser", disabled=cooldown)
+
+    if cooldown:
+        remaining = int(COOLDOWN_S - (now - _last_call))
+        st.warning(f"Patientez {remaining}s")
+
+    if btn and ia_sc in results:
+        st.session_state.last_api_call = time.time()
+        st.session_state.last_scenario = ia_sc
+        try:
+            summary = extract_summary(results[ia_sc], ia_sc)
+            with st.spinner("Analyse en cours…"):
+                st.session_state.last_analysis = _strip_html(analyse_scenario(ia_sc, summary))
+        except Exception:
+            log.exception("Erreur analyse IA")
+            st.error("Erreur lors de l'analyse. Vérifiez la clé API et réessayez.")
+
+    if st.session_state.last_analysis:
         st.markdown(
-            f"<div class='status-card {css}'><b>{b['name']}</b> — {label}</div>",
-            unsafe_allow_html=True
+            f"<div class='ia-result'>{st.session_state.last_analysis}</div>",
+            unsafe_allow_html=True,
+        )
+    elif not btn:
+        st.markdown(
+            "<div class='ia-empty'>Sélectionne un scénario et lance l'analyse.</div>",
+            unsafe_allow_html=True,
         )
 
-# --- PAGE : SCENARIOS ---
-elif page == "📈 Scénarios":
-    variable = st.selectbox(
-        "Variable",
-        ["population", "resources", "pollution", "capital", "life_expectancy", "food_per_capita", "hdi"]
-    )
-
-    scenarios = st.multiselect(
-        "Scénarios",
-        list(SCENARIOS.keys()),
-        default=list(SCENARIOS.keys())
-    )
-
-    if scenarios:
-        filtered = {k: results[k] for k in scenarios}
-        fig = chart_trajectories(filtered, variable, is_mobile=st.session_state.is_mobile)
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-
-# --- PAGE : IA ---
-elif page == "🤖 Analyse IA":
-    selected = st.selectbox("Scénario", list(SCENARIOS.keys()))
-
-    now = time.time()
-    last = st.session_state.get("last_api_call", 0)
-
-    if now - last < 10:
-        st.warning("Attendez 10s entre les analyses")
-
-    if st.button("Analyser"):
-        st.session_state["last_api_call"] = time.time()
-        df = results[selected]
-        summary = extract_summary(df, selected)
-        analysis = analyse_scenario(selected, summary)
-        st.markdown(f"<div class='card'>{analysis}</div>", unsafe_allow_html=True)
-
-# --- FOOTER ---
-st.markdown("<div class='footer'>World Model v0.1 · 2026</div>", unsafe_allow_html=True)
+# ─── FOOTER ──────────────────────────────────────────────────────────────────
+st.markdown(
+    "<div class='wm-footer'>World Model v0.1 · 2026 · SW bifurcation research</div>",
+    unsafe_allow_html=True,
+)
