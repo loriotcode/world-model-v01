@@ -345,10 +345,10 @@ with tab4:
     with c2:
         now      = time.time()
         try:
-            _last_call = float(st.session_state.last_api_call)
+            _last_call = float(st.session_state.get("last_api_call", 0.0))
         except (TypeError, ValueError):
             _last_call = 0.0
-            st.session_state.last_api_call = 0.0
+            st.session_state["last_api_call"] = 0.0
         cooldown = now - _last_call < COOLDOWN_S
         btn      = st.button("Analyser", disabled=cooldown)
 
@@ -367,9 +367,9 @@ with tab4:
             log.exception("Erreur analyse IA")
             st.error("Erreur lors de l'analyse. Vérifiez la clé API et réessayez.")
 
-    if st.session_state.last_analysis:
+    if st.session_state.get("last_analysis"):
         st.markdown(
-            f"<div class='ia-result'>{st.session_state.last_analysis}</div>",
+            f"<div class='ia-result'>{st.session_state.get('last_analysis', '')}</div>",
             unsafe_allow_html=True,
         )
     elif not btn:
