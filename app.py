@@ -39,7 +39,7 @@ configure_logging()
 log = logging.getLogger(__name__)
 
 # ─── SESSION STATE ────────────────────────────────────────────────────────────
-_SS_DEFAULTS = {"last_api_call": 0.0, "last_analysis": "", "last_scenario": "", "nav_page": "🏠 Aperçu"}
+_SS_DEFAULTS = {"last_api_call": 0.0, "last_analysis": "", "last_scenario": ""}
 for k, v in _SS_DEFAULTS.items():
     st.session_state.setdefault(k, v)
 
@@ -163,6 +163,8 @@ st.markdown("""
   --accent: #4a7c59;
 }
 
+/* Masque le bandeau Streamlit natif (⋮ menu) */
+header[data-testid="stHeader"] { display:none !important; }
 section[data-testid="stSidebar"],
 [data-testid="collapsedControl"] { display:none !important; }
 
@@ -188,24 +190,27 @@ section[data-testid="stSidebar"],
 .wm-metric .lbl   { font-size:0.63em; color:var(--muted); margin-top:1px; }
 .wm-metric .delta { font-size:0.58em; color:var(--warn); margin-top:1px; }
 
-/* ── Nav popover : petit carré coin gauche ── */
-.wm-nav-btn button {
-  width:28px !important; height:28px !important; min-width:28px !important;
-  padding:0 !important; border-radius:6px !important;
-  background:var(--panel) !important; border:1px solid var(--border) !important;
-  font-size:14px !important; color:var(--text) !important;
-  line-height:28px !important; text-align:center !important;
-  box-shadow:0 1px 3px rgba(0,0,0,0.06) !important;
+/* ── Tabs compacts (emoji seuls + tooltip au survol) ── */
+.stTabs [data-baseweb="tab-list"] {
+  gap:3px; background:#f0eae2; border-radius:8px;
+  padding:3px; margin-bottom:6px;
 }
-.wm-nav-btn button:hover { background:#f0eae2 !important; }
-/* Radio dans le popover */
-.wm-nav-btn [data-testid="stRadio"] label {
-  font-size:0.82em !important; padding:3px 6px !important; cursor:pointer;
+.stTabs [data-baseweb="tab"] {
+  border-radius:6px; padding:4px 11px; font-size:1.05em;
+  background:transparent; border:none; color:var(--muted);
+  position:relative; cursor:pointer;
 }
-.wm-page-badge {
-  display:inline-block; font-size:0.68em; color:var(--accent);
-  background:rgba(74,124,89,0.10); border:1px solid rgba(74,124,89,0.25);
-  border-radius:5px; padding:1px 6px; margin-left:6px; vertical-align:middle;
+.stTabs [aria-selected="true"] {
+  background:var(--panel) !important; color:var(--accent) !important;
+  box-shadow:0 1px 3px rgba(0,0,0,0.07);
+}
+/* Tooltip texte au survol */
+.stTabs [data-baseweb="tab"]:hover::after {
+  content: attr(data-tooltip);
+  position:absolute; top:110%; left:50%; transform:translateX(-50%);
+  background:var(--text); color:#fff; font-size:0.62em; white-space:nowrap;
+  padding:2px 7px; border-radius:4px; pointer-events:none; z-index:999;
+  opacity:0.92;
 }
 
 .status-row   { display:flex; flex-wrap:wrap; gap:5px; margin:5px 0; }
@@ -250,23 +255,12 @@ div[data-baseweb="select"] { background:var(--panel) !important; border-color:va
 </style>
 """, unsafe_allow_html=True)
 
-# ─── HEADER + NAV ────────────────────────────────────────────────────────────
-_c_nav, _c_title = st.columns([0.055, 0.945])
-with _c_nav:
-    st.markdown("<div class='wm-nav-btn'>", unsafe_allow_html=True)
-    with st.popover("☰", use_container_width=True):
-        st.radio("", PAGES, key="nav_page", label_visibility="collapsed")
-    st.markdown("</div>", unsafe_allow_html=True)
-with _c_title:
-    _cur = st.session_state.get("nav_page", PAGES[0])
-    st.markdown(
-        f"<div class='wm-header'><span>🌍</span><h1>World Model v0.1</h1>"
-        f"<span class='wm-page-badge'>{_cur}</span>"
-        f"<span class='sub'>2026 · SW</span></div>",
-        unsafe_allow_html=True,
-    )
-
-page = st.session_state.get("nav_page", PAGES[0])
+# ─── HEADER ──────────────────────────────────────────────────────────────────
+st.markdown(
+    "<div class='wm-header'><span>🌍</span><h1>World Model v0.1</h1>"
+    "<span class='sub'>2026 · Simondon SW</span></div>",
+    unsafe_allow_html=True,
+)
 
 # ─── MÉTRIQUES ───────────────────────────────────────────────────────────────
 pop_val = f"{bau_2050['population']:.1f}" if bau_2050 is not None else "—"
@@ -299,10 +293,11 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ─── CONTENU ─────────────────────────────────────────────────────────────────
+# ─── NAVIGATION ──────────────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠", "📈", "🌐", "🔄", "🤖"])
 
-# ── Page : Aperçu ─────────────────────────────────────────────────────────────
-if page == "🏠 Aperçu":
+# ══ TAB 1 : Aperçu ═══════════════════════════════════════════════════════════
+with tab1:
     var_home = st.selectbox("Variable", VARIABLES[:5], key="v_home",
                             label_visibility="collapsed")
     _render_chart(chart_trajectories(results, var_home), key="chart_home")
@@ -316,8 +311,8 @@ if page == "🏠 Aperçu":
             unsafe_allow_html=True,
         )
 
-# ── Page : Scénarios ──────────────────────────────────────────────────────────
-elif page == "📈 Scénarios":
+# ══ TAB 2 : Scénarios ════════════════════════════════════════════════════════
+with tab2:
     c1, c2 = st.columns(2)
     with c1:
         variable = st.selectbox("Variable", VARIABLES, key="v_sc",
@@ -335,8 +330,8 @@ elif page == "📈 Scénarios":
     else:
         st.info("Sélectionne au moins un scénario.")
 
-# ── Page : Limites ────────────────────────────────────────────────────────────
-elif page == "🌐 Limites":
+# ══ TAB 3 : Limites ══════════════════════════════════════════════════════════
+with tab3:
     st.markdown(f"""
     <div class="status-row">
       <span class="status-pill pill-safe">✓ {counts['safe']} Safe</span>
@@ -363,15 +358,15 @@ elif page == "🌐 Limites":
     else:
         st.warning("Données limites planétaires indisponibles.")
 
-# ── Page : Système ────────────────────────────────────────────────────────────
-elif page == "🔄 Système":
+# ══ TAB 4 : Système ══════════════════════════════════════════════════════════
+with tab4:
     fig_sys = chart_system_diagram()
     fig_sys.update_layout(height=290)
     st.plotly_chart(fig_sys, use_container_width=True,
                     config=PLOTLY_CFG, key="chart_system")
 
-# ── Page : IA ─────────────────────────────────────────────────────────────────
-elif page == "🤖 IA":
+# ══ TAB 5 : IA ═══════════════════════════════════════════════════════════════
+with tab5:
     c1, c2 = st.columns([2, 1])
     with c1:
         ia_sc = st.selectbox("Scénario", list(SCENARIOS.keys()), key="ia_sc",
