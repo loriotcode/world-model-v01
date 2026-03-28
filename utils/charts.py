@@ -176,7 +176,6 @@ def chart_planetary_boundaries_as_bars(boundaries):
         xaxis=dict(
             title=dict(text="Limite planétaire"),
             tickangle=-35,
-            tickfont=dict(size=7),
             **_AXIS_BASE,
         ),
         yaxis=dict(
