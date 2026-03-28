@@ -27,7 +27,11 @@ if _ROOT not in sys.path:
 
 from models.world3 import run_all_scenarios, SCENARIOS
 from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS
-from utils.charts import chart_trajectories, chart_planetary_boundaries_as_bars
+from utils.charts import (
+    chart_trajectories,
+    chart_planetary_boundaries_as_bars,
+    chart_system_diagram,
+)
 from services.claude_api import analyse_scenario, extract_summary
 from utils.logging_config import configure_logging
 
@@ -272,7 +276,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ─── NAVIGATION ──────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["🏠 Aperçu", "📈 Scénarios", "🌐 Limites", "🤖 IA"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Aperçu", "📈 Scénarios", "🌐 Limites", "🔄 Système", "🤖 IA"])
 
 # ══ TAB 1 ════════════════════════════════════════════════════════════════════
 with tab1:
@@ -338,6 +342,13 @@ with tab3:
 
 # ══ TAB 4 ════════════════════════════════════════════════════════════════════
 with tab4:
+    fig_sys = chart_system_diagram()
+    fig_sys.update_layout(height=290)
+    st.plotly_chart(fig_sys, use_container_width=True,
+                    config=PLOTLY_CFG, key="chart_system")
+
+# ══ TAB 5 ════════════════════════════════════════════════════════════════════
+with tab5:
     c1, c2 = st.columns([2, 1])
     with c1:
         ia_sc = st.selectbox("Scénario", list(SCENARIOS.keys()), key="ia_sc",
