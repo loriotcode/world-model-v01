@@ -74,9 +74,9 @@ def _strip_html(text: str) -> str:
     """Supprime les balises HTML d'un texte (output LLM) avant affichage unsafe."""
     return _HTML_TAGS.sub("", str(text))
 
-def _render_chart(fig):
+def _render_chart(fig, key: str):
     fig.update_layout(**CHART_LAYOUT)
-    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, key=key)
 
 def _get_year_row(scenario: str, year: int):
     df = results.get(scenario)
@@ -278,7 +278,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏠 Aperçu", "📈 Scénarios", "🌐 Limit
 with tab1:
     var_home = st.selectbox("Variable", VARIABLES[:5], key="v_home",
                             label_visibility="collapsed")
-    _render_chart(chart_trajectories(results, var_home))
+    _render_chart(chart_trajectories(results, var_home), key="chart_home")
 
     cols = st.columns(len(SCENARIOS))
     for col, (_, sc) in zip(cols, SCENARIOS.items()):
@@ -304,7 +304,7 @@ with tab2:
     if selected_sc:
         _render_chart(chart_trajectories(
             {k: results[k] for k in selected_sc}, variable,
-        ))
+        ), key="chart_scenarios")
     else:
         st.info("Sélectionne au moins un scénario.")
 
@@ -320,7 +320,7 @@ with tab3:
     if boundaries:
         fig = chart_planetary_boundaries_as_bars(boundaries)
         fig.update_layout(height=210, margin=dict(l=10, r=10, t=12, b=8), font=dict(size=8))
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, key="chart_boundaries")
 
         for b in boundaries:
             label, _ = STATUS_LABELS[b["status"]]
