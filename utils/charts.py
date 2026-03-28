@@ -129,11 +129,18 @@ def chart_planetary_boundaries_as_bars(boundaries):
 
     fig = go.Figure()
 
-    # Barres principales
+    # Barres principales avec % au-dessus
+    max_ratio = max((r for r in ratios), default=100)
+    text_labels = [f"{r:.0f}%" if hd else "N/A" for r, hd in zip(ratios, has_data)]
+
     fig.add_trace(go.Bar(
         x=names,
         y=ratios,
         marker_color=colors,
+        text=text_labels,
+        textposition="outside",
+        textfont=dict(size=7, color=TEXT_COLOR),
+        cliponaxis=False,
         hovertemplate="%{customdata}<extra></extra>",
         customdata=hovers,
         showlegend=False,
@@ -151,28 +158,11 @@ def chart_planetary_boundaries_as_bars(boundaries):
         annotation_position="top right",
     )
 
-    # Légende couleurs statut (traces invisibles pour la légende)
-    for label, (stat, color) in [
-        ("Safe",     ("safe",     STATUS_COLORS["safe"])),
-        ("Dépassée", ("exceeded", STATUS_COLORS["exceeded"])),
-        ("Critique", ("critical", STATUS_COLORS["critical"])),
-    ]:
-        fig.add_trace(go.Bar(
-            x=[None], y=[None],
-            marker_color=color,
-            name=label,
-            showlegend=True,
-        ))
-
     fig.update_layout(
         paper_bgcolor=BACKGROUND_COLOR,
         plot_bgcolor=PLOT_BACKGROUND,
         font=dict(color=TEXT_COLOR),
-        barmode="overlay",
-        legend=dict(
-            orientation="h", y=1.15, x=0,
-            font=dict(size=8), bgcolor="rgba(0,0,0,0)",
-        ),
+        showlegend=False,
         xaxis=dict(
             title=dict(text="Limite planétaire"),
             tickangle=-35,
@@ -180,6 +170,7 @@ def chart_planetary_boundaries_as_bars(boundaries):
         ),
         yaxis=dict(
             title=dict(text="% du seuil sûr"),
+            range=[0, max_ratio * 1.22],
             **_AXIS_BASE,
         ),
         dragmode=False,
