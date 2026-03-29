@@ -26,9 +26,13 @@ function _renderBtns(year, isPlaying) {
     if (locked) btn.classList.add('wm-disabled');
 
     btn.addEventListener('click', () => {
-      if (locked) return;
+      // Lire l'état live au moment du clic (pas la closure figée)
+      const nowYear     = parseInt(document.getElementById('wm-iso-slider').value) || 1970;
+      const nowPlaying  = !!document.getElementById('wm-iso-play') &&
+                          document.getElementById('wm-iso-play').textContent === '⏸';
+      if (nowYear < 2026 || nowPlaying) return;
       _currentScenario = sc;
-      _renderBtns(year, isPlaying);
+      _renderBtns(nowYear, nowPlaying);
       if (_onScenarioChange) _onScenarioChange(sc);
       close();
     });
@@ -45,7 +49,7 @@ function open() {
   if (!drawer || _isOpen) return;
   _isOpen = true;
   if (typeof anime !== 'undefined') {
-    anime({ targets: drawer, translateX: ['−100%', '0%'], duration: 300, easing: 'easeOutCubic' });
+    anime({ targets: drawer, translateX: ['-100%', '0%'], duration: 300, easing: 'easeOutCubic' });
   } else {
     drawer.style.transform = 'translateX(0%)';
   }

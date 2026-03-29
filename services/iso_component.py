@@ -105,8 +105,8 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 
 <div id="wm-iso-toolbar">
   <button id="wm-iso-play">▶</button>
-  <span id="wm-iso-year">1940</span>
-  <input type="range" id="wm-iso-slider" min="1940" max="2100" value="1940" step="1">
+  <span id="wm-iso-year">1970</span>
+  <input type="range" id="wm-iso-slider" min="1970" max="2100" value="1970" step="1">
   <span class="scenario-tag" id="wm-iso-sc-tag">{default_scenario}</span>
   <button id="wm-iso-menu-btn">☰</button>
 </div>
@@ -220,11 +220,8 @@ function worldDataToGrid(row, cols, rows) {{
 function redraw() {{
   const ctx = canvas.getContext('2d');
   const off = getOffset();
-  // Fond
-  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  grad.addColorStop(0, '#1a237e');
-  grad.addColorStop(1, '#0d47a1');
-  ctx.fillStyle = grad;
+  // Fond neutre (contraste avec toutes les tuiles)
+  ctx.fillStyle = '#2a2a2a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const year     = parseInt(document.getElementById('wm-iso-slider').value);
