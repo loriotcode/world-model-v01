@@ -195,23 +195,23 @@ function worldDataToGrid(row, cols, rows) {{
       let tile;
       if (dist > 0.85)       tile = (c < 2 || r < 2) ? 'deep_water' : 'forest';
       else if (dist > 0.60) {{
-        if (pol > 0.7)       tile = 'wasteland';
+        if (pol > 0.10)      tile = 'wasteland';
         else if (res > 0.7)  tile = 'forest';
         else if (res > 0.4)  tile = 'grass';
         else if (food > 0.5) tile = 'farmland';
         else                 tile = 'sand';
       }} else if (dist > 0.35) {{
-        if (pol > 0.75)      tile = 'wasteland';
-        else if (cap > 0.6)  tile = 'industrial';
+        if (pol > 0.12)      tile = 'wasteland';
+        else if (cap > 0.25) tile = 'industrial';
         else if (hdi > 0.55) tile = 'suburb';
         else if (res > 0.5)  tile = 'grass';
         else                 tile = 'farmland';
       }} else {{
-        if (pol > 0.8)             tile = 'wasteland';
-        else if (cap > 0.7)        tile = 'industrial';
-        else if (pop > 0.75 && hdi > 0.5) tile = 'dense_urban';
-        else if (pop > 0.5)        tile = 'urban';
-        else                       tile = 'suburb';
+        if (pol > 0.13)                    tile = 'wasteland';
+        else if (cap > 0.30)               tile = 'industrial';
+        else if (pop > 0.40 && hdi > 0.5) tile = 'dense_urban';
+        else if (pop > 0.25)               tile = 'urban';
+        else                               tile = 'suburb';
       }}
       if (dist < 0.45 && pol < 0.3 && hdi > 0.7 && (c+r) % 7 === 0) tile = 'park';
       line.push(tile);
