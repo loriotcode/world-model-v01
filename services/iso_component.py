@@ -239,7 +239,7 @@ function redraw() {{
   const _polRow = _polRows.find(r => r.year === year) || _polRows[_polRows.length - 1] || {{}};
   const polVal = Math.min(1, (_polRow.pollution || 0) / 2.0);
 
-  prevGrid = renderGrid(ctx, grid, prevGrid, off.x, off.y, Math.min(polVal, 1));
+  prevGrid = renderGrid(ctx, grid, null, off.x, off.y, Math.min(polVal, 1));
 }}
 
 // ── Moteur JS chargé inline ci-dessous
