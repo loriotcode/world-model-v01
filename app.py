@@ -285,7 +285,7 @@ with tab6:
         st.error(f"Erreur chargement composant iso : {_iso_err}")
     else:
         import streamlit.components.v1 as components
-        components.html(build_iso_html(results), height=600)
+        components.html(build_iso_html(results), height=900, scrolling=False)
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown(
