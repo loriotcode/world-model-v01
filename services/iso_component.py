@@ -195,8 +195,14 @@ function worldDataToGrid(row, cols, rows) {{
     for (let c = 0; c < cols; c++) {{
       const dist = Math.sqrt((c-cx)**2 + (r-cy)**2) / maxD;
       let tile;
-      if (dist > 0.85)       tile = (c < 2 || r < 2) ? 'deep_water' : 'forest';
-      else if (dist > 0.60) {{
+      if (dist > 0.85) {{
+        if (c < 2 || r < 2)  tile = 'deep_water';
+        else if (pol > 0.10) tile = 'wasteland';
+        else if (res > 0.7)  tile = 'forest';
+        else if (res > 0.4)  tile = 'grass';
+        else if (food > 0.5) tile = 'farmland';
+        else                 tile = 'sand';
+      }} else if (dist > 0.60) {{
         if (pol > 0.10)      tile = 'wasteland';
         else if (res > 0.7)  tile = 'forest';
         else if (res > 0.4)  tile = 'grass';
