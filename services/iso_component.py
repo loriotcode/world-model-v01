@@ -105,7 +105,7 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 
 <div id="wm-iso-toolbar">
   <button id="wm-iso-play">▶</button>
-  <span id="wm-iso-year">1970</span>
+  <span id="wm-iso-year">1960</span>
   <input type="range" id="wm-iso-slider" min="1960" max="2100" value="1960" step="1">
   <span class="scenario-tag" id="wm-iso-sc-tag">{default_scenario}</span>
   <button id="wm-iso-menu-btn">☰</button>
@@ -130,7 +130,7 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 const WM_DATA = {wm_data_json};
 
 // ── Paramètres canvas
-const COLS = 20, ROWS = 16;
+const COLS = 60, ROWS = 50;
 
 // ── State
 let currentScenario = {json.dumps(default_scenario, ensure_ascii=True)};
@@ -141,9 +141,8 @@ const canvas = document.getElementById('wm-iso-canvas');
 function resizeCanvas() {{
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight - 38;
-  const _mult = 1.15 + 2 * canvas.height / canvas.width;
-  TW = Math.floor(2 * canvas.width / (COLS + ROWS) * _mult);
-  TH = Math.floor(TW / 2);
+  TW = 28;
+  TH = 14;
 }}
 resizeCanvas();
 window.addEventListener('resize', () => {{ resizeCanvas(); prevGrid = null; redraw(); }});
