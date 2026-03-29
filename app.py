@@ -31,8 +31,16 @@ from utils.charts import (
     chart_trajectories,
     chart_planetary_boundaries_as_bars,
     chart_system_diagram,
+    STATUS_COLORS,
 )
+from utils.styles import STYLES
 from services.claude_api import analyse_scenario, extract_summary
+try:
+    from services.iso_component import build_iso_html
+    _ISO_OK = True
+except Exception as _iso_err:
+    _ISO_OK = False
+    build_iso_html = None
 from utils.logging_config import configure_logging
 
 configure_logging()
@@ -46,7 +54,7 @@ for k, v in _SS_DEFAULTS.items():
 # ─── CONSTANTES ──────────────────────────────────────────────────────────────
 COOLDOWN_S   = 10
 CHART_LAYOUT = dict(
-    height  = 230,
+    height  = 400,
     margin  = dict(l=30, r=10, t=20, b=30),
     font    = dict(size=9),
     legend  = dict(orientation="h", yanchor="bottom", y=1.02,
@@ -54,9 +62,6 @@ CHART_LAYOUT = dict(
 )
 PLOTLY_CFG = dict(responsive=True, displayModeBar=False,
                   scrollZoom=False, doubleClick=False, displaylogo=False)
-
-# Source unique des couleurs de statut
-STATUS_COLORS = {"safe": "#4a7c59", "exceeded": "#d68910", "critical": "#a8323e"}
 
 # Whitelist des variables (sécurité)
 VARIABLES = ["population", "resources", "pollution", "capital",
@@ -84,8 +89,8 @@ def _render_chart(fig, key: str):
     fig.update_layout(**CHART_LAYOUT)
     st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, key=key)
 
-def _get_year_row(scenario: str, year: int):
-    df = results.get(scenario)
+def _get_year_row(data: dict, scenario: str, year: int):
+    df = data.get(scenario)
     if df is None or df.empty:
         return None
     rows = df[df["year"] == year]
@@ -116,144 +121,11 @@ if not results:
     st.error("Impossible de charger les simulations. Vérifiez les logs.")
     st.stop()
 
-bau_2050 = _get_year_row("BAU", 2050)
-sw_2050  = _get_year_row("SW",  2050)
+bau_2050 = _get_year_row(results, "BAU", 2050)
+sw_2050  = _get_year_row(results, "SW",  2050)
 
 # ─── CSS + JS ────────────────────────────────────────────────────────────────
-st.markdown("""
-<script>
-(function(){
-  if (screen.orientation && screen.orientation.lock) {
-    screen.orientation.lock('landscape').catch(function(){});
-  }
-  function checkOrientation() {
-    var el = document.getElementById('wm-overlay');
-    if (el) el.style.display = (window.innerHeight > window.innerWidth) ? 'flex' : 'none';
-  }
-  ['resize', 'orientationchange'].forEach(function(ev){
-    window.addEventListener(ev, function(){ setTimeout(checkOrientation, 300); });
-  });
-  setTimeout(checkOrientation, 600);
-})();
-</script>
-
-<div id="wm-overlay" style="display:none;position:fixed;inset:0;z-index:99999;
-  background:rgba(248,245,240,0.97);flex-direction:column;align-items:center;
-  justify-content:center;font-family:sans-serif;text-align:center;padding:30px;">
-  <div style="font-size:48px;margin-bottom:16px;animation:tilt 2s ease-in-out infinite;">📱</div>
-  <div style="font-size:1.1em;font-weight:700;color:#2d3748;">Rotation requise</div>
-  <div style="font-size:0.85em;color:#718096;margin-top:6px;">Mode paysage uniquement</div>
-</div>
-
-<style>
-@keyframes tilt {
-  0%,100% { transform:rotate(0deg); }
-  30%,70%  { transform:rotate(-90deg); }
-}
-
-:root {
-  --bg:     #f8f5f0;
-  --panel:  #ffffff;
-  --border: #d1c7b7;
-  --text:   #2d3748;
-  --muted:  #718096;
-  --safe:   #4a7c59;
-  --warn:   #d68910;
-  --crit:   #a8323e;
-  --accent: #4a7c59;
-}
-
-/* Masque le bandeau Streamlit natif (⋮ menu) */
-header[data-testid="stHeader"] { display:none !important; }
-section[data-testid="stSidebar"],
-[data-testid="collapsedControl"] { display:none !important; }
-
-.stApp { background:var(--bg) !important; color:var(--text); }
-
-.block-container { padding:0.4rem 0.7rem 0.8rem !important; max-width:100% !important; }
-
-.wm-header {
-  display:flex; align-items:center; gap:8px;
-  padding:5px 0; border-bottom:1px solid var(--border); margin-bottom:6px;
-}
-.wm-header h1 { font-size:0.95em; font-weight:700; margin:0; color:var(--text); }
-.wm-header .sub { font-size:0.7em; color:var(--muted); margin-left:auto; }
-
-.wm-metrics {
-  display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:7px;
-}
-.wm-metric {
-  background:var(--panel); border:1px solid var(--border);
-  border-radius:8px; padding:6px 7px; text-align:center;
-}
-.wm-metric .val   { font-size:1.1em; font-weight:700; color:var(--accent); }
-.wm-metric .lbl   { font-size:0.63em; color:var(--muted); margin-top:1px; }
-.wm-metric .delta { font-size:0.58em; color:var(--warn); margin-top:1px; }
-
-/* ── Tabs compacts (emoji seuls + tooltip au survol) ── */
-.stTabs [data-baseweb="tab-list"] {
-  gap:3px; background:#f0eae2; border-radius:8px;
-  padding:3px; margin-bottom:6px;
-}
-.stTabs [data-baseweb="tab"] {
-  border-radius:6px; padding:4px 11px; font-size:1.05em;
-  background:transparent; border:none; color:var(--muted);
-  position:relative; cursor:pointer;
-}
-.stTabs [aria-selected="true"] {
-  background:var(--panel) !important; color:var(--accent) !important;
-  box-shadow:0 1px 3px rgba(0,0,0,0.07);
-}
-/* Tooltip texte au survol */
-.stTabs [data-baseweb="tab"]:hover::after {
-  content: attr(data-tooltip);
-  position:absolute; top:110%; left:50%; transform:translateX(-50%);
-  background:var(--text); color:#fff; font-size:0.62em; white-space:nowrap;
-  padding:2px 7px; border-radius:4px; pointer-events:none; z-index:999;
-  opacity:0.92;
-}
-
-.status-row   { display:flex; flex-wrap:wrap; gap:5px; margin:5px 0; }
-.status-pill  { padding:3px 9px; border-radius:20px; font-size:0.7em; font-weight:600; }
-.pill-safe     { background:rgba(74,124,89,.12);  color:var(--safe); border:1px solid var(--safe); }
-.pill-exceeded { background:rgba(214,137,16,.12); color:var(--warn); border:1px solid var(--warn); }
-.pill-critical { background:rgba(168,50,62,.12);  color:var(--crit); border:1px solid var(--crit); }
-
-.bound-item {
-  display:flex; align-items:center; gap:8px;
-  padding:4px 0; border-bottom:1px solid var(--border); font-size:0.78em;
-}
-.bound-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-
-.ia-result {
-  background:var(--panel); border:1px solid var(--border); border-radius:10px;
-  padding:11px 13px; font-size:0.81em; line-height:1.6; color:var(--text);
-  max-height:255px; overflow-y:auto;
-}
-.ia-empty { font-size:0.8em; color:var(--muted); padding:10px 0; }
-
-.sc-legend { display:flex; align-items:center; gap:5px; font-size:0.7em; }
-.sc-dot    { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-
-.stSelectbox label, .stMultiSelect label { font-size:0.76em !important; color:var(--muted) !important; }
-div[data-baseweb="select"] { background:var(--panel) !important; border-color:var(--border) !important; }
-
-.stButton button {
-  background:var(--accent) !important; color:#fff !important;
-  font-weight:700; border-radius:7px; border:none;
-  font-size:0.83em; padding:6px 16px; width:100%;
-}
-.stButton button:disabled { opacity:0.45 !important; }
-
-.wm-footer {
-  margin-top:8px; font-size:0.66em; color:var(--muted);
-  text-align:center; border-top:1px solid var(--border); padding-top:5px;
-}
-
-::-webkit-scrollbar { width:3px; height:3px; }
-::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-</style>
-""", unsafe_allow_html=True)
+st.markdown(STYLES, unsafe_allow_html=True)
 
 # ─── HEADER ──────────────────────────────────────────────────────────────────
 st.markdown(
@@ -294,7 +166,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ─── NAVIGATION ──────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠", "📈", "🌐", "🔄", "🤖"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🏠", "📈", "🌐", "🔄", "🤖", "🏙"])
 
 # ══ TAB 1 : Aperçu ═══════════════════════════════════════════════════════════
 with tab1:
@@ -341,7 +213,7 @@ with tab3:
 
     if boundaries:
         fig = chart_planetary_boundaries_as_bars(boundaries)
-        fig.update_layout(height=210, margin=dict(l=10, r=10, t=12, b=8), font=dict(size=8))
+        fig.update_layout(height=380, margin=dict(l=10, r=10, t=12, b=8), font=dict(size=8))
         st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, key="chart_boundaries")
 
         for b in boundaries:
@@ -361,7 +233,7 @@ with tab3:
 # ══ TAB 4 : Système ══════════════════════════════════════════════════════════
 with tab4:
     fig_sys = chart_system_diagram()
-    fig_sys.update_layout(height=290)
+    fig_sys.update_layout(height=480)
     st.plotly_chart(fig_sys, use_container_width=True,
                     config=PLOTLY_CFG, key="chart_system")
 
@@ -406,6 +278,14 @@ with tab5:
             "<div class='ia-empty'>Sélectionne un scénario et lance l'analyse.</div>",
             unsafe_allow_html=True,
         )
+
+# ══ TAB 6 : Simulation isométrique ══════════════════════════════════════════
+with tab6:
+    if not _ISO_OK:
+        st.error(f"Erreur chargement composant iso : {_iso_err}")
+    else:
+        import streamlit.components.v1 as components
+        components.html(build_iso_html(results), height=600)
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown(

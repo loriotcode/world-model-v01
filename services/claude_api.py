@@ -14,6 +14,7 @@ Sécurité :
 import os
 import re
 import logging
+import functools
 import anthropic
 from dotenv import load_dotenv
 
@@ -30,15 +31,14 @@ ALLOWED_SCENARIOS = {"BAU", "BAU2", "SW"}
 _API_TIMEOUT = 30.0
 
 
+@functools.lru_cache(maxsize=1)
 def get_client() -> "anthropic.Anthropic | None":
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
-    # Validation format basique — on ne logue PAS la clé ni même ses premiers chars
     if not api_key.startswith("sk-ant-"):
         _logger.warning("ANTHROPIC_API_KEY: format inattendu (non sk-ant-*)")
         return None
-    # Instanciation dans un try pour éviter toute fuite de clé en cas d'erreur
     try:
         return anthropic.Anthropic(api_key=api_key)
     except Exception:
