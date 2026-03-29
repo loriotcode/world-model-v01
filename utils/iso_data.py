@@ -147,23 +147,27 @@ def world3_to_grid(df_row: pd.Series, cols: int = COLS, rows: int = ROWS) -> lis
 
             # --- périphérie : campagne/nature ---
             elif dist > 0.60:
-                if res > 0.6:
+                if pol > 0.7:
+                    tile = "wasteland"
+                elif res > 0.7:
                     tile = "forest"
+                elif res > 0.4:
+                    tile = "grass"
                 elif food > 0.5:
                     tile = "farmland"
-                elif pol > 0.7:
-                    tile = "wasteland"
                 else:
-                    tile = "grass"
+                    tile = "sand"
 
             # --- zone intermédiaire : suburb/rural ---
             elif dist > 0.35:
                 if pol > 0.75:
                     tile = "wasteland"
-                elif hdi > 0.6 and food > 0.4:
-                    tile = "suburb"
-                elif cap > 0.5:
+                elif cap > 0.6:
                     tile = "industrial"
+                elif hdi > 0.55:
+                    tile = "suburb"
+                elif res > 0.5:
+                    tile = "grass"
                 else:
                     tile = "farmland"
 

@@ -147,9 +147,12 @@ window.addEventListener('resize', () => {{ resizeCanvas(); prevGrid = null; redr
 
 // ── Offset centrage
 function getOffset() {{
+  // Centre la grille isométrique et la force à déborder du viewport
+  // sx_center = (COLS/2 - ROWS/2)*TW/2 + offsetX → offsetX = W/2 - (COLS/2-ROWS/2)*TW/2
+  // sy_center = (COLS/2 + ROWS/2)*TH/2 + offsetY → offsetY = H/2 - (COLS/2+ROWS/2)*TH/2
   return {{
-    x: canvas.width / 2,
-    y: 20,
+    x: canvas.width  / 2 - (COLS / 2 - ROWS / 2) * TW / 2,
+    y: canvas.height / 2 - (COLS / 2 + ROWS / 2) * TH / 2,
   }};
 }}
 
@@ -192,15 +195,17 @@ function worldDataToGrid(row, cols, rows) {{
       let tile;
       if (dist > 0.85)       tile = (c < 2 || r < 2) ? 'deep_water' : 'forest';
       else if (dist > 0.60) {{
-        if (res > 0.6)       tile = 'forest';
+        if (pol > 0.7)       tile = 'wasteland';
+        else if (res > 0.7)  tile = 'forest';
+        else if (res > 0.4)  tile = 'grass';
         else if (food > 0.5) tile = 'farmland';
-        else if (pol > 0.7)  tile = 'wasteland';
-        else                 tile = 'grass';
+        else                 tile = 'sand';
       }} else if (dist > 0.35) {{
-        if (pol > 0.75)            tile = 'wasteland';
-        else if (hdi > 0.6 && food > 0.4) tile = 'suburb';
-        else if (cap > 0.5)        tile = 'industrial';
-        else                       tile = 'farmland';
+        if (pol > 0.75)      tile = 'wasteland';
+        else if (cap > 0.6)  tile = 'industrial';
+        else if (hdi > 0.55) tile = 'suburb';
+        else if (res > 0.5)  tile = 'grass';
+        else                 tile = 'farmland';
       }} else {{
         if (pol > 0.8)             tile = 'wasteland';
         else if (cap > 0.7)        tile = 'industrial';

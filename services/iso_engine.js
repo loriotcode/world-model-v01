@@ -4,8 +4,8 @@
  * Ordre painter : row 0→N, col 0→N
  */
 
-const TW = 32;  // tile width
-const TH = 16;  // tile height
+const TW = 80;  // tile width
+const TH = 40;  // tile height
 
 // ---------------------------------------------------------------------------
 // C3 — Palette procédurale (12 types, zéro PNG)
@@ -18,8 +18,8 @@ const TILE_DEFS = {
   forest:      { top: '#2E7D32', left: '#1B5E20', right: '#388E3C', h: 4 },
   farmland:    { top: '#A1887F', left: '#795548', right: '#BCAAA4', h: 0 },
   suburb:      { top: '#90A4AE', left: '#607D8B', right: '#B0BEC5', h: 6 },
-  urban:       { top: '#546E7A', left: '#37474F', right: '#78909C', h: 10 },
-  dense_urban: { top: '#455A64', left: '#263238', right: '#546E7A', h: 16 },
+  urban:       { top: '#4DD0E1', left: '#00ACC1', right: '#80DEEA', h: 10 },
+  dense_urban: { top: '#FFA726', left: '#F57C00', right: '#FFD54F', h: 16 },
   industrial:  { top: '#E64A19', left: '#BF360C', right: '#FF7043', h: 14 },
   wasteland:   { top: '#795548', left: '#4E342E', right: '#8D6E63', h: 0 },
   park:        { top: '#43A047', left: '#2E7D32', right: '#66BB6A', h: 2 },
@@ -80,17 +80,6 @@ function drawTile(ctx, col, row, tileType, offsetX, offsetY) {
     ctx.strokeStyle = 'rgba(0,0,0,0.12)';
     ctx.stroke();
 
-    // --- Toit ---
-    ctx.beginPath();
-    ctx.moveTo(sx,          sy - h + TH);
-    ctx.lineTo(sx + TW / 2, sy - h + TH + TH / 2);
-    ctx.lineTo(sx,          sy - h + TH * 2);
-    ctx.lineTo(sx - TW / 2, sy - h + TH + TH / 2);
-    ctx.closePath();
-    ctx.fillStyle = def.top;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-    ctx.stroke();
   }
 }
 

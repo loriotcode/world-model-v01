@@ -81,5 +81,5 @@ function initDrawer(onScenarioChange, getYear, getIsPlaying) {
     _renderBtns(getYear(), getIsPlaying());
   });
 
-  _renderBtns(1940, false);
+  _renderBtns(1970, false);
 }
