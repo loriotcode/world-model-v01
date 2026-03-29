@@ -4,8 +4,8 @@
  * Ordre painter : row 0→N, col 0→N
  */
 
-const TW = 80;  // tile width
-const TH = 40;  // tile height
+let TW = 80;  // tile width  (recalculé dynamiquement)
+let TH = 40;  // tile height (recalculé dynamiquement)
 
 // ---------------------------------------------------------------------------
 // C3 — Palette procédurale (12 types, zéro PNG)

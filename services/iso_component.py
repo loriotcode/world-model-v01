@@ -141,6 +141,8 @@ const canvas = document.getElementById('wm-iso-canvas');
 function resizeCanvas() {{
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight - 38;
+  TW = Math.floor(2 * canvas.width  / (COLS + ROWS));
+  TH = Math.floor(TW / 2);
 }}
 resizeCanvas();
 window.addEventListener('resize', () => {{ resizeCanvas(); prevGrid = null; redraw(); }});
