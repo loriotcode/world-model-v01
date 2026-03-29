@@ -126,7 +126,7 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 </div>
 
 <script>
-// ── Données World3 injectées (ensure_ascii=True → pas d'injection </script>)
+// ── Données World3 injectées
 const WM_DATA = {wm_data_json};
 
 // ── Paramètres canvas
