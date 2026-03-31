@@ -30,6 +30,9 @@ from models.planetary import load_boundaries, get_status_counts, STATUS_LABELS
 from utils.charts import (
     chart_trajectories,
     chart_planetary_boundaries_as_bars,
+    chart_boundary_feedback_network,
+    chart_earth4all_architecture,
+    chart_levers_diagram,
     chart_system_diagram,
     STATUS_COLORS,
 )
@@ -54,11 +57,11 @@ for k, v in _SS_DEFAULTS.items():
 # ─── CONSTANTES ──────────────────────────────────────────────────────────────
 COOLDOWN_S   = 10
 CHART_LAYOUT = dict(
-    height  = 400,
-    margin  = dict(l=30, r=10, t=20, b=30),
-    font    = dict(size=9),
+    height  = 520,
+    margin  = dict(l=30, r=10, t=30, b=30),
+    font    = dict(size=11),
     legend  = dict(orientation="h", yanchor="bottom", y=1.02,
-                   xanchor="right", x=1, font=dict(size=9)),
+                   xanchor="right", x=1, font=dict(size=11)),
 )
 PLOTLY_CFG = dict(responsive=True, displayModeBar=False,
                   scrollZoom=False, doubleClick=False, displaylogo=False)
@@ -67,7 +70,7 @@ PLOTLY_CFG = dict(responsive=True, displayModeBar=False,
 VARIABLES = ["population", "resources", "pollution", "capital",
              "life_expectancy", "food_per_capita", "hdi"]
 
-PAGES = ["🏠 Aperçu", "📈 Scénarios", "🌐 Limites", "🔄 Système", "🤖 IA"]
+PAGES = ["📈 Modèle", "🌐 Limites", "🔄 Système", "🤖 IA"]
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 _COLOR_RE  = re.compile(r'^#[0-9a-fA-F]{3,6}$')
@@ -129,16 +132,13 @@ st.markdown(STYLES, unsafe_allow_html=True)
 
 # ─── HEADER ──────────────────────────────────────────────────────────────────
 st.markdown(
-    "<div class='wm-header'><span>🌍</span><h1>World Model v0.1</h1>"
-    "<span class='sub'>2026 · Simondon SW</span></div>",
+    "<div class='wm-header'><span>🌍</span><h1>Our World Model.v01</h1></div>",
     unsafe_allow_html=True,
 )
 
 # ─── MÉTRIQUES ───────────────────────────────────────────────────────────────
 pop_val = f"{bau_2050['population']:.1f}" if bau_2050 is not None else "—"
 res_val = f"{bau_2050['resources']*100:.0f}%" if bau_2050 is not None else "—"
-hdi_sw  = f"{sw_2050['hdi']:.2f}"  if sw_2050  is not None else "—"
-hdi_bau = f"{bau_2050['hdi']:.2f}" if bau_2050 is not None else "—"
 
 st.markdown(f"""
 <div class="wm-metrics">
@@ -157,53 +157,45 @@ st.markdown(f"""
     <div class="lbl">Ressources</div>
     <div class="delta">BAU 2050</div>
   </div>
-  <div class="wm-metric">
-    <div class="val">{_safe_html(hdi_sw)}</div>
-    <div class="lbl">HDI SW</div>
-    <div class="delta">vs {_safe_html(hdi_bau)}</div>
-  </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ─── NAVIGATION ──────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🏠", "📈", "🌐", "🔄", "🤖", "🏙"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Modèle", "🌐 Limites", "🔄 Système", "🤖 IA", "🏙"])
 
-# ══ TAB 1 : Aperçu ═══════════════════════════════════════════════════════════
+# ══ TAB 1 : Modèle et scénario ════════════════════════════════════════════════
 with tab1:
-    var_home = st.selectbox("Variable", VARIABLES[:5], key="v_home",
-                            label_visibility="collapsed")
-    _render_chart(chart_trajectories(results, var_home), key="chart_home")
-
-    cols = st.columns(len(SCENARIOS))
-    for col, (_, sc) in zip(cols, SCENARIOS.items()):
-        col.markdown(
-            f"<div class='sc-legend'>"
-            f"<div class='sc-dot' style='background:{_safe_color(sc['color'])}'></div>"
-            f"{_safe_html(sc['label'])}</div>",
-            unsafe_allow_html=True,
-        )
-
-# ══ TAB 2 : Scénarios ════════════════════════════════════════════════════════
-with tab2:
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns([1, 1, 1])
     with c1:
+        model_src = st.selectbox(
+            "Modèle", ["WorldDynamics.jl (World3)", "Earth4All.jl"],
+            key="model_src", label_visibility="collapsed",
+        )
+    with c2:
         variable = st.selectbox("Variable", VARIABLES, key="v_sc",
                                 label_visibility="collapsed")
-    with c2:
+    with c3:
         sc_keys     = list(SCENARIOS.keys())
         selected_sc = st.multiselect("Scénarios", sc_keys, default=sc_keys,
                                      key="sc_sel", label_visibility="collapsed")
-        selected_sc = [k for k in selected_sc if k in SCENARIOS]  # whitelist
+        selected_sc = [k for k in selected_sc if k in SCENARIOS]
 
-    if selected_sc:
-        _render_chart(chart_trajectories(
-            {k: results[k] for k in selected_sc}, variable,
-        ), key="chart_scenarios")
+    if model_src == "Earth4All.jl":
+        st.info("Earth4All.jl — intégration en cours. Données placeholder.")
+        fig_e4a = chart_earth4all_architecture()
+        fig_e4a.update_layout(height=520)
+        st.plotly_chart(fig_e4a, use_container_width=True, config=PLOTLY_CFG,
+                        key="chart_e4a_model")
     else:
-        st.info("Sélectionne au moins un scénario.")
+        if selected_sc:
+            _render_chart(chart_trajectories(
+                {k: results[k] for k in selected_sc}, variable,
+            ), key="chart_scenarios")
+        else:
+            st.info("Sélectionne au moins un scénario.")
 
-# ══ TAB 3 : Limites ══════════════════════════════════════════════════════════
-with tab3:
+# ══ TAB 2 : Limites planétaires ═══════════════════════════════════════════════
+with tab2:
     st.markdown(f"""
     <div class="status-row">
       <span class="status-pill pill-safe">✓ {counts['safe']} Safe</span>
@@ -212,17 +204,26 @@ with tab3:
     </div>""", unsafe_allow_html=True)
 
     if boundaries:
-        fig = chart_planetary_boundaries_as_bars(boundaries)
-        fig.update_layout(height=380, margin=dict(l=10, r=10, t=12, b=8), font=dict(size=8))
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, key="chart_boundaries")
+        fig_bars = chart_planetary_boundaries_as_bars(boundaries)
+        fig_bars.update_layout(height=420, margin=dict(l=10, r=10, t=30, b=8),
+                               font=dict(size=9))
+        st.plotly_chart(fig_bars, use_container_width=True, config=PLOTLY_CFG,
+                        key="chart_boundaries")
+
+        st.markdown("**Réseau de rétroaction**", help="Flèches rouges = amplifying · Bleues = dampening · Bordure rouge = irréversible")
+        fig_net = chart_boundary_feedback_network(boundaries)
+        fig_net.update_layout(height=460)
+        st.plotly_chart(fig_net, use_container_width=True, config=PLOTLY_CFG,
+                        key="chart_feedback_net")
 
         for b in boundaries:
             label, _ = STATUS_LABELS[b["status"]]
             color = _safe_color(STATUS_COLORS.get(b["status"], "#888888"))
+            irr_badge = "<span class='irrev-badge'>IRRÉVERSIBLE</span>" if b.get("irreversible") else ""
             st.markdown(
                 f"<div class='bound-item'>"
                 f"<div class='bound-dot' style='background:{color}'></div>"
-                f"<span>{_safe_html(b['name'])}</span>"
+                f"<span>{_safe_html(b['name'])}{irr_badge}</span>"
                 f"<span style='margin-left:auto;color:{color}'>{_safe_html(label)}</span>"
                 f"</div>",
                 unsafe_allow_html=True,
@@ -230,15 +231,28 @@ with tab3:
     else:
         st.warning("Données limites planétaires indisponibles.")
 
-# ══ TAB 4 : Système ══════════════════════════════════════════════════════════
-with tab4:
-    fig_sys = chart_system_diagram()
-    fig_sys.update_layout(height=480)
-    st.plotly_chart(fig_sys, use_container_width=True,
-                    config=PLOTLY_CFG, key="chart_system")
+# ══ TAB 3 : Système ═══════════════════════════════════════════════════════════
+with tab3:
+    _model = st.session_state.get("model_src", "WorldDynamics.jl (World3)")
+    if _model == "Earth4All.jl":
+        st.markdown("**Architecture Earth4All**")
+        fig_e4a = chart_earth4all_architecture()
+        fig_e4a.update_layout(height=460)
+        st.plotly_chart(fig_e4a, use_container_width=True, config=PLOTLY_CFG,
+                        key="chart_e4a_sys")
+        st.markdown("**Leviers & Tipping Points**")
+        fig_lev = chart_levers_diagram()
+        fig_lev.update_layout(height=460)
+        st.plotly_chart(fig_lev, use_container_width=True, config=PLOTLY_CFG,
+                        key="chart_levers")
+    else:
+        fig_sys = chart_system_diagram()
+        fig_sys.update_layout(height=520)
+        st.plotly_chart(fig_sys, use_container_width=True,
+                        config=PLOTLY_CFG, key="chart_system")
 
-# ══ TAB 5 : IA ═══════════════════════════════════════════════════════════════
-with tab5:
+# ══ TAB 4 : IA ═══════════════════════════════════════════════════════════════
+with tab4:
     c1, c2 = st.columns([2, 1])
     with c1:
         ia_sc = st.selectbox("Scénario", list(SCENARIOS.keys()), key="ia_sc",
@@ -279,8 +293,8 @@ with tab5:
             unsafe_allow_html=True,
         )
 
-# ══ TAB 6 : Simulation isométrique ══════════════════════════════════════════
-with tab6:
+# ══ TAB 5 : Simulation isométrique ══════════════════════════════════════════
+with tab5:
     if not _ISO_OK:
         st.error(f"Erreur chargement composant iso : {_iso_err}")
     else:
@@ -289,6 +303,8 @@ with tab6:
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown(
-    "<div class='wm-footer'>World Model v0.1 · 2026 · SW bifurcation research</div>",
+    "<div class='wm-footer'>"
+    "<a href='https://github.com/loriotcode/world-model-v01' target='_blank'>GitHub</a>"
+    "</div>",
     unsafe_allow_html=True,
 )

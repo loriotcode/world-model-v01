@@ -113,9 +113,11 @@ class World3Simulation:
         return max(20.0, base - pollution_penalty)
 
     def _birth_rate(self, capital_idx: float, year: int) -> float:
+        import math as _math
         base_rate = 0.040 - 0.022 * capital_idx
         if year > 2000:
-            base_rate *= (1 - 0.003 * (year - 2000))
+            # Transition démographique en sigmoid : pic ~2035–2040 puis déclin
+            base_rate *= 1.0 / (1.0 + _math.exp(0.05 * (year - 2035)))
         return max(0.010, base_rate * self.p["birth_rate_mod"])
 
     def _death_rate(self, life_expectancy: float) -> float:
