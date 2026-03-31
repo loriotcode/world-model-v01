@@ -4,11 +4,12 @@
  * Ordre painter : row 0→N, col 0→N
  */
 
-let TW = 28;  // tile width
-let TH = 14;  // tile height
+let TW = 48;  // tile width  (format TS standard 48×24)
+let TH = 24;  // tile height
 
 // ---------------------------------------------------------------------------
-// C3 — Palette procédurale (12 types, zéro PNG)
+// C3 — Palette procédurale (14 types, zéro PNG)
+// Hauteurs h scalées × (24/14 ≈ 1.71) par rapport à l'ancien TH=14
 // ---------------------------------------------------------------------------
 const TILE_DEFS = {
   checker_black: { top: '#222222', left: '#111111', right: '#333333', h: 0 },
@@ -17,14 +18,14 @@ const TILE_DEFS = {
   water:       { top: '#1976D2', left: '#1565C0', right: '#42A5F5', h: 0 },
   sand:        { top: '#F9A825', left: '#F57F17', right: '#FBC02D', h: 0 },
   grass:       { top: '#388E3C', left: '#2E7D32', right: '#43A047', h: 0 },
-  forest:      { top: '#2E7D32', left: '#1B5E20', right: '#388E3C', h: 4 },
+  forest:      { top: '#2E7D32', left: '#1B5E20', right: '#388E3C', h: 7 },
   farmland:    { top: '#A1887F', left: '#795548', right: '#BCAAA4', h: 0 },
-  suburb:      { top: '#90A4AE', left: '#607D8B', right: '#B0BEC5', h: 6 },
-  urban:       { top: '#4DD0E1', left: '#00ACC1', right: '#80DEEA', h: 10 },
-  dense_urban: { top: '#FFA726', left: '#F57C00', right: '#FFD54F', h: 16 },
-  industrial:  { top: '#E64A19', left: '#BF360C', right: '#FF7043', h: 14 },
+  suburb:      { top: '#90A4AE', left: '#607D8B', right: '#B0BEC5', h: 10 },
+  urban:       { top: '#4DD0E1', left: '#00ACC1', right: '#80DEEA', h: 17 },
+  dense_urban: { top: '#FFA726', left: '#F57C00', right: '#FFD54F', h: 27 },
+  industrial:  { top: '#E64A19', left: '#BF360C', right: '#FF7043', h: 24 },
   wasteland:   { top: '#795548', left: '#4E342E', right: '#8D6E63', h: 0 },
-  park:        { top: '#43A047', left: '#2E7D32', right: '#66BB6A', h: 2 },
+  park:        { top: '#43A047', left: '#2E7D32', right: '#66BB6A', h: 3 },
 };
 
 // ---------------------------------------------------------------------------

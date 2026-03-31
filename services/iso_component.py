@@ -109,7 +109,7 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 const WM_DATA = {wm_data_json};
 
 // ── Paramètres canvas
-const COLS = 60, ROWS = 50;
+const COLS = 80, ROWS = 60;
 
 // ── State
 let currentScenario = {json.dumps(default_scenario, ensure_ascii=True)};
@@ -120,8 +120,8 @@ const canvas = document.getElementById('wm-iso-canvas');
 function resizeCanvas() {{
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight - 38;
-  TW = 28;
-  TH = 14;
+  TW = 48;
+  TH = 24;
 }}
 resizeCanvas();
 window.addEventListener('resize', () => {{ resizeCanvas(); prevGrid = null; redraw(); }});
@@ -170,51 +170,97 @@ function getGridForYear(scenario, year) {{
   return worldDataToGrid(interp, COLS, ROWS);
 }}
 
-// ── Mapping données → grille (miroir de iso_data.py)
+// ── Hash déterministe par tile [0,1) — évite Math.random() (instable)
+function tileHash(c, r, seed) {{
+  let h = (c * 374761393 + r * 668265263 + (seed | 0)) ^ 0x5bd1e995;
+  h = Math.imul(h ^ (h >>> 15), 0x1b873593);
+  h = h ^ (h >>> 13);
+  return (h >>> 0) / 4294967296;
+}}
+
+// ── Mapping données → grille géographique (Rennes)
+// Rupture de la logique circulaire : géographie en Y d'abord,
+// puis simulation module les zones non-fixes.
 function worldDataToGrid(row, cols, rows) {{
   const norm = (k, lo, hi) => Math.max(0, Math.min(1, ((row[k] || 0) - lo) / (hi - lo)));
-  // Mêmes plages que iso_data.py (unités réelles du modèle world3.py)
-  const res  = norm('resources',        0.0, 1.0);   // [0-1] clamped
-  const pop  = norm('population',       0.0, 15.0);  // milliards
-  const pol  = norm('pollution',        0.0, 2.0);   // [0-2] clamped
-  const food = norm('food_per_capita',  0.0, 1.0);   // [0-1] normalisé
-  const cap  = norm('capital',          0.0, 1.5);   // [0-1.5] clamped
-  const hdi  = norm('hdi',              0.0, 1.0);   // [0-1] normalisé
-  const cx = cols / 2, cy = rows / 2;
-  const maxD = Math.sqrt(cx*cx + cy*cy);
+  const res  = norm('resources',       0.0, 1.0);
+  const pop  = norm('population',      0.0, 15.0);
+  const pol  = norm('pollution',       0.0, 2.0);
+  const food = norm('food_per_capita', 0.0, 1.0);
+  const cap  = norm('capital',         0.0, 1.5);
+  const hdi  = norm('hdi',             0.0, 1.0);
+
+  // Confluence Ille-Vilaine : légèrement à l'ouest du centre (comme Rennes)
+  const jx = Math.floor(cols * 0.45);   // col ~36 sur 80
+  const jy = Math.floor(rows * 0.50);   // row ~30 sur 60
+  const maxD = Math.sqrt(Math.max(jx, cols-jx)**2 + Math.max(jy, rows-jy)**2);
+
   const grid = [];
   for (let r = 0; r < rows; r++) {{
     const line = [];
     for (let c = 0; c < cols; c++) {{
-      const dist = Math.sqrt((c-cx)**2 + (r-cy)**2) / maxD;
+
+      // Bruit par tile (±4%)
+      const n = (s) => tileHash(c, r, s) * 0.08 - 0.04;
+      const nRes  = Math.max(0, Math.min(1, res  + n(7)));
+      const nPop  = Math.max(0, Math.min(1, pop  + n(13)));
+      const nPol  = Math.max(0, Math.min(1, pol  + n(19)));
+      const nCap  = Math.max(0, Math.min(1, cap  + n(31)));
+      const nHdi  = Math.max(0, Math.min(1, hdi  + n(37)));
+      const nFood = Math.max(0, Math.min(1, food + n(41)));
+
+      // Distance à la confluence (non normalisée)
+      const dist = Math.sqrt((c - jx)**2 + (r - jy)**2) / maxD;
+
+      // ── Rivières (géographie fixe, légère ondulation via hash)
+      const riverW = 1 + (tileHash(c, r, 3) > 0.75 ? 1 : 0);   // largeur 1-2 tiles
+      const onVilaine = Math.abs(r - jy) <= riverW;              // E-W (axe col)
+      const onIlle    = Math.abs(c - jx) <= riverW && r <= jy + 3; // N-S (axe row, moitié nord)
+
       let tile;
-      if (dist > 0.85) {{
-        if (c < 2 || r < 2)  tile = 'deep_water';
-        else if (pol > 0.10) tile = 'wasteland';
-        else if (res > 0.7)  tile = 'forest';
-        else if (res > 0.4)  tile = 'grass';
-        else if (food > 0.5) tile = 'farmland';
-        else                 tile = 'sand';
-      }} else if (dist > 0.60) {{
-        if (pol > 0.10)      tile = 'wasteland';
-        else if (res > 0.7)  tile = 'forest';
-        else if (res > 0.4)  tile = 'grass';
-        else if (food > 0.5) tile = 'farmland';
-        else                 tile = 'sand';
-      }} else if (dist > 0.35) {{
-        if (pol > 0.12)      tile = 'wasteland';
-        else if (cap > 0.25) tile = 'industrial';
-        else if (hdi > 0.55) tile = 'suburb';
-        else if (res > 0.5)  tile = 'grass';
-        else                 tile = 'farmland';
+
+      if (onVilaine || onIlle) {{
+        // Rivière — se dégrade en wasteland si très pollué
+        tile = nPol > 0.55 ? 'wasteland' : 'water';
+
+      }} else if (dist < 0.13) {{
+        // Centre-ville (confluence / hypercentre rennais)
+        if (nPol > 0.20)                       tile = 'wasteland';
+        else if (nCap > 0.35)                  tile = 'industrial';
+        else if (nPop > 0.35 && nHdi > 0.45)  tile = 'dense_urban';
+        else if (nPop > 0.20)                  tile = 'urban';
+        else                                   tile = 'suburb';
+
+      }} else if (dist < 0.30) {{
+        // Couronne urbaine (Cesson, Saint-Grégoire…)
+        if (nPol > 0.18)   tile = 'wasteland';
+        else if (nCap > 0.30) tile = 'industrial';
+        else if (nHdi > 0.50) tile = 'suburb';
+        else if (nRes > 0.45) tile = 'grass';
+        else                  tile = 'farmland';
+
+      }} else if (dist < 0.58) {{
+        // Périphérie / campagne rennaise
+        if (nPol > 0.14)     tile = 'wasteland';
+        else if (nRes > 0.65) tile = 'forest';
+        else if (nRes > 0.40) tile = 'grass';
+        else if (nFood > 0.45) tile = 'farmland';
+        else                   tile = 'sand';
+
       }} else {{
-        if (pol > 0.13)                    tile = 'wasteland';
-        else if (cap > 0.30)               tile = 'industrial';
-        else if (pop > 0.40 && hdi > 0.5) tile = 'dense_urban';
-        else if (pop > 0.25)               tile = 'urban';
-        else                               tile = 'suburb';
+        // Lointain (Bretagne profonde)
+        if (nPol > 0.11)     tile = 'wasteland';
+        else if (nRes > 0.70) tile = 'forest';
+        else if (nRes > 0.45) tile = 'grass';
+        else if (nFood > 0.50) tile = 'farmland';
+        else                   tile = 'sand';
       }}
-      if (dist < 0.45 && pol < 0.3 && hdi > 0.7 && (c+r) % 7 === 0) tile = 'park';
+
+      // Petits parcs urbains (ville propre et développée)
+      if (dist < 0.38 && nPol < 0.08 && nHdi > 0.72 && tileHash(c, r, 47) > 0.94) {{
+        tile = 'park';
+      }}
+
       line.push(tile);
     }}
     grid.push(line);
