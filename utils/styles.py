@@ -55,43 +55,31 @@ section[data-testid="stSidebar"],
 .block-container { padding:0.4rem 0.7rem 0.8rem !important; max-width:100% !important; }
 
 .wm-header {
-  display:flex; align-items:center; gap:6px;
-  padding:3px 0; border-bottom:1px solid var(--border); margin-bottom:5px;
+  padding:10px 0 6px; margin:0;
 }
 .wm-header h1 { font-size:0.82em; font-weight:700; margin:0; color:var(--text); letter-spacing:0.01em; }
 
-.wm-metrics {
-  display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:7px;
+/* ── Navigation cubes (6 blocs) ── */
+.wm-nav {
+  display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-bottom:7px;
 }
-.wm-metric {
+.wm-nav-cube {
   background:var(--panel); border:1px solid var(--border);
-  border-radius:8px; padding:6px 7px; text-align:center;
+  border-radius:8px; padding:7px 5px; text-align:center;
+  cursor:pointer; transition:border-color 0.15s, box-shadow 0.15s;
 }
-.wm-metric .val   { font-size:1.1em; font-weight:700; color:var(--accent); }
-.wm-metric .lbl   { font-size:0.63em; color:var(--muted); margin-top:1px; }
-.wm-metric .delta { font-size:0.58em; color:var(--warn); margin-top:1px; }
+.wm-nav-cube:hover { border-color:var(--accent); }
+.wm-nav-cube.active {
+  border-color:var(--accent); box-shadow:0 1px 4px rgba(74,124,89,0.18);
+  font-weight:700;
+}
+.wm-nav-cube .nav-icon { font-size:1.2em; }
+.wm-nav-cube .nav-lbl  { font-size:0.60em; color:var(--muted); margin-top:1px; }
+.wm-nav-cube .nav-kpi  { font-size:0.78em; font-weight:700; color:var(--accent); margin-top:2px; }
+.wm-nav-cube.active .nav-lbl { color:var(--text); }
 
-/* ── Tabs compacts (emoji seuls + tooltip au survol) ── */
-.stTabs [data-baseweb="tab-list"] {
-  gap:3px; background:#f0eae2; border-radius:8px;
-  padding:3px; margin-bottom:6px;
-}
-.stTabs [data-baseweb="tab"] {
-  border-radius:6px; padding:4px 11px; font-size:1.05em;
-  background:transparent; border:none; color:var(--muted);
-  position:relative; cursor:pointer;
-}
-.stTabs [aria-selected="true"] {
-  background:var(--panel) !important; color:var(--accent) !important;
-  box-shadow:0 1px 3px rgba(0,0,0,0.07);
-}
-.stTabs [data-baseweb="tab"]:hover::after {
-  content: attr(data-tooltip);
-  position:absolute; top:110%; left:50%; transform:translateX(-50%);
-  background:var(--text); color:#fff; font-size:0.62em; white-space:nowrap;
-  padding:2px 7px; border-radius:4px; pointer-events:none; z-index:999;
-  opacity:0.92;
-}
+/* Hide native Streamlit tabs when using custom nav */
+.stTabs [data-baseweb="tab-list"] { display:none !important; }
 
 .status-row   { display:flex; flex-wrap:wrap; gap:5px; margin:5px 0; }
 .status-pill  { padding:3px 9px; border-radius:20px; font-size:0.7em; font-weight:600; }
@@ -153,9 +141,9 @@ div[data-baseweb="select"] { background:var(--panel) !important; border-color:va
 
 /* ── Responsive smartphone ── */
 @media (max-width:768px) {
-  .wm-metrics { grid-template-columns:repeat(3,1fr); gap:3px; }
-  .wm-metric { padding:4px 5px; }
-  .wm-metric .val { font-size:0.9em; }
+  .wm-nav { grid-template-columns:repeat(3,1fr); gap:3px; }
+  .wm-nav-cube { padding:4px 3px; }
+  .wm-nav-cube .nav-icon { font-size:1em; }
   .block-container { padding:0.2rem 0.3rem 0.5rem !important; }
   .wm-footer { position:static; text-align:center; margin-top:4px; }
 }

@@ -50,7 +50,7 @@ configure_logging()
 log = logging.getLogger(__name__)
 
 # ─── SESSION STATE ────────────────────────────────────────────────────────────
-_SS_DEFAULTS = {"last_api_call": 0.0, "last_analysis": "", "last_scenario": ""}
+_SS_DEFAULTS = {"last_api_call": 0.0, "last_analysis": "", "last_scenario": "", "active_tab": 0}
 for k, v in _SS_DEFAULTS.items():
     st.session_state.setdefault(k, v)
 
@@ -132,36 +132,63 @@ st.markdown(STYLES, unsafe_allow_html=True)
 
 # ─── HEADER ──────────────────────────────────────────────────────────────────
 st.markdown(
-    "<div class='wm-header'><span>🌍</span><h1>Our World Model.v01</h1></div>",
+    "<div class='wm-header'><h1>Our World Model.v01</h1></div>",
     unsafe_allow_html=True,
 )
 
-# ─── MÉTRIQUES ───────────────────────────────────────────────────────────────
+# ─── KPI values ──────────────────────────────────────────────────────────────
 pop_val = f"{bau_2050['population']:.1f}" if bau_2050 is not None else "—"
 res_val = f"{bau_2050['resources']*100:.0f}%" if bau_2050 is not None else "—"
+lim_val = f"{counts['exceeded'] + counts['critical']}/9"
 
+# ─── NAVIGATION CUBES (6 blocs) ─────────────────────────────────────────────
 st.markdown(f"""
-<div class="wm-metrics">
-  <div class="wm-metric">
-    <div class="val">{counts['exceeded'] + counts['critical']}/9</div>
-    <div class="lbl">Limites</div>
-    <div class="delta">{counts['critical']} crit.</div>
+<div class="wm-nav" id="wm-nav-cubes">
+  <div class="wm-nav-cube" data-tab="0">
+    <div class="nav-icon">📈</div><div class="nav-lbl">Modèle</div>
+    <div class="nav-kpi">{_safe_html(pop_val)} Md</div>
   </div>
-  <div class="wm-metric">
-    <div class="val">{_safe_html(pop_val)}</div>
-    <div class="lbl">Pop. 2050 Md</div>
-    <div class="delta">BAU</div>
+  <div class="wm-nav-cube" data-tab="1">
+    <div class="nav-icon">🌐</div><div class="nav-lbl">Limites</div>
+    <div class="nav-kpi">{_safe_html(lim_val)}</div>
   </div>
-  <div class="wm-metric">
-    <div class="val">{_safe_html(res_val)}</div>
-    <div class="lbl">Ressources</div>
-    <div class="delta">BAU 2050</div>
+  <div class="wm-nav-cube" data-tab="2">
+    <div class="nav-icon">🔄</div><div class="nav-lbl">Système</div>
+    <div class="nav-kpi">{_safe_html(res_val)}</div>
+  </div>
+  <div class="wm-nav-cube" data-tab="3">
+    <div class="nav-icon">🤖</div><div class="nav-lbl">IA</div>
+  </div>
+  <div class="wm-nav-cube" data-tab="4">
+    <div class="nav-icon">🏙</div><div class="nav-lbl">Simulation</div>
+  </div>
+  <div class="wm-nav-cube" data-tab="5">
+    <div class="nav-icon">🛠</div><div class="nav-lbl">Code</div>
   </div>
 </div>
+<script>
+(function() {{
+  // Click cube → click hidden Streamlit tab
+  document.querySelectorAll('.wm-nav-cube').forEach(function(cube) {{
+    cube.addEventListener('click', function() {{
+      var idx = parseInt(this.getAttribute('data-tab'));
+      var tabs = parent.document.querySelectorAll('[data-baseweb="tab"]');
+      if (tabs[idx]) tabs[idx].click();
+      // Active state
+      document.querySelectorAll('.wm-nav-cube').forEach(function(c) {{ c.classList.remove('active'); }});
+      this.classList.add('active');
+    }});
+  }});
+  // Set first cube active on load
+  var first = document.querySelector('.wm-nav-cube[data-tab="0"]');
+  if (first) first.classList.add('active');
+}})();
+</script>
 """, unsafe_allow_html=True)
 
-# ─── NAVIGATION ──────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Modèle", "🌐 Limites", "🔄 Système", "🤖 IA", "🏙"])
+# ─── TABS (barre cachée via CSS, contenu visible) ───────────────────────────
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    ["📈 Modèle", "🌐 Limites", "🔄 Système", "🤖 IA", "🏙", "🛠 Code"])
 
 # ══ TAB 1 : Modèle et scénario ════════════════════════════════════════════════
 with tab1:
@@ -253,45 +280,66 @@ with tab3:
 
 # ══ TAB 4 : IA ═══════════════════════════════════════════════════════════════
 with tab4:
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        ia_sc = st.selectbox("Scénario", list(SCENARIOS.keys()), key="ia_sc",
-                             label_visibility="collapsed")
-    with c2:
-        now      = time.time()
-        try:
-            _last_call = float(st.session_state.get("last_api_call", 0.0))
-        except (TypeError, ValueError):
-            _last_call = 0.0
-            st.session_state["last_api_call"] = 0.0
-        cooldown = now - _last_call < COOLDOWN_S
-        btn      = st.button("Analyser", disabled=cooldown)
+    main_col, panel_col = st.columns([3, 1])
+    with main_col:
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            ia_sc = st.selectbox("Scénario", list(SCENARIOS.keys()), key="ia_sc",
+                                 label_visibility="collapsed")
+        with c2:
+            now = time.time()
+            try:
+                _last_call = float(st.session_state.get("last_api_call", 0.0))
+            except (TypeError, ValueError):
+                _last_call = 0.0
+                st.session_state["last_api_call"] = 0.0
+            cooldown = now - _last_call < COOLDOWN_S
+            btn = st.button("Analyser", disabled=cooldown)
 
-    if cooldown:
-        remaining = int(COOLDOWN_S - (now - _last_call))
-        st.warning(f"Patientez {remaining}s")
+        if cooldown:
+            remaining = int(COOLDOWN_S - (now - _last_call))
+            st.warning(f"Patientez {remaining}s")
 
-    if btn and ia_sc in results:
-        st.session_state.last_api_call = time.time()
-        st.session_state.last_scenario = ia_sc
-        try:
-            summary = extract_summary(results[ia_sc], ia_sc)
-            with st.spinner("Analyse en cours…"):
-                st.session_state.last_analysis = _strip_html(analyse_scenario(ia_sc, summary))
-        except Exception:
-            log.exception("Erreur analyse IA")
-            st.error("Erreur lors de l'analyse. Vérifiez la clé API et réessayez.")
+        if btn and ia_sc in results:
+            st.session_state.last_api_call = time.time()
+            st.session_state.last_scenario = ia_sc
+            try:
+                summary = extract_summary(results[ia_sc], ia_sc)
+                with st.spinner("Analyse en cours…"):
+                    st.session_state.last_analysis = _strip_html(analyse_scenario(ia_sc, summary))
+            except Exception:
+                log.exception("Erreur analyse IA")
+                st.error("Erreur lors de l'analyse. Vérifiez la clé API et réessayez.")
 
-    if st.session_state.get("last_analysis"):
-        st.markdown(
-            f"<div class='ia-result'>{st.session_state.get('last_analysis', '')}</div>",
-            unsafe_allow_html=True,
+        if st.session_state.get("last_analysis"):
+            st.markdown(
+                f"<div class='ia-result'>{st.session_state.get('last_analysis', '')}</div>",
+                unsafe_allow_html=True,
+            )
+        elif not btn:
+            st.markdown(
+                "<div class='ia-empty'>Sélectionne un scénario et lance l'analyse.</div>",
+                unsafe_allow_html=True,
+            )
+
+        # Screenshot pixel-agents
+        st.markdown("---")
+        st.markdown("**Pixel Agents — Bureau IA**")
+        st.image(
+            "https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/Screenshot.jpg",
+            use_container_width=True,
         )
-    elif not btn:
-        st.markdown(
-            "<div class='ia-empty'>Sélectionne un scénario et lance l'analyse.</div>",
-            unsafe_allow_html=True,
-        )
+
+    with panel_col:
+        st.markdown("#### Orchestration")
+        st.selectbox("Type", ["Séquentiel", "Parallèle", "Hiérarchique"],
+                     key="orch_type", label_visibility="collapsed")
+        st.markdown("---")
+        st.markdown("#### Outils")
+        postal = st.text_input("Code postal", key="postal_code",
+                               label_visibility="collapsed", placeholder="Code postal…")
+        if postal:
+            st.info(f"Recherche ONH région {postal}…")
 
 # ══ TAB 5 : Simulation isométrique ══════════════════════════════════════════
 with tab5:
@@ -300,6 +348,23 @@ with tab5:
     else:
         import streamlit.components.v1 as components
         components.html(build_iso_html(results), height=900, scrolling=False)
+
+# ══ TAB 6 : Code & GitHub ════════════════════════════════════════════════════
+with tab6:
+    st.markdown("### Code & Contributions")
+    st.markdown(
+        "**Repository:** "
+        "[world-model-v01](https://github.com/loriotcode/world-model-v01)"
+    )
+    st.markdown("**Stack:** Streamlit 1.43.2 · Plotly 5.20 · World3 (Python) · Canvas ISO")
+    st.markdown("**Deploy:** Railway (branche main)")
+    st.markdown("---")
+    st.markdown(
+        "**Modèles:** WorldDynamics.jl (World3 simplifié) · "
+        "Earth4All.jl (placeholder)\n\n"
+        "**Données:** 9 limites planétaires (Stockholm Resilience Centre 2023) · "
+        "3 scénarios (BAU, BAU2, SW) · Simulation 1970–2100"
+    )
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown(

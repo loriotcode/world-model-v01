@@ -1,85 +1,40 @@
 /**
- * iso_drawer.js — Drawer scénarios (slide gauche) — WMv0.1
- * Anime.js pour la transition CSS transform.
+ * iso_drawer.js — Boutons scénarios inline (toolbar droite) — WMv0.1
  */
 
-const SCENARIOS = ['BAU', 'BAU2', 'SW'];  // scénarios réels du modèle world3.py
+const SCENARIOS = ['BAU', 'BAU2', 'SW'];
 let _currentScenario = 'BAU';
-let _isOpen = false;
-let _onScenarioChange = null;  // callback(scenario)
+let _onScenarioChange = null;
 
-// ---------------------------------------------------------------------------
-// Rendu des boutons
-// ---------------------------------------------------------------------------
-function _renderBtns(year, isPlaying) {
-  const list = document.getElementById('wm-iso-scenario-list');
-  if (!list) return;
-  list.innerHTML = '';
+function _renderScenarioBtns(year, isPlaying) {
+  const container = document.getElementById('wm-iso-scenario-btns');
+  if (!container) return;
+  container.innerHTML = '';
+  const locked = year < 2026 || isPlaying;
 
   SCENARIOS.forEach(sc => {
     const btn = document.createElement('button');
-    btn.className = 'scenario-btn' + (sc === _currentScenario ? ' active' : '');
+    btn.className = 'sc-tb-btn' + (sc === _currentScenario ? ' active' : '');
     btn.textContent = sc;
-
-    // Verrouillage : disabled si year < 2026 OU isPlaying
-    const locked = year < 2026 || isPlaying;
     if (locked) btn.classList.add('wm-disabled');
 
     btn.addEventListener('click', () => {
-      // Lire l'état live au moment du clic (pas la closure figée)
-      const nowYear     = parseInt(document.getElementById('wm-iso-slider').value) || 1970;
-      const nowPlaying  = !!document.getElementById('wm-iso-play') &&
-                          document.getElementById('wm-iso-play').textContent === '⏸';
+      const nowYear    = parseInt(document.getElementById('wm-iso-slider').value) || 1970;
+      const nowPlaying = document.getElementById('wm-iso-play')?.textContent === '⏸';
       if (nowYear < 2026 || nowPlaying) return;
       _currentScenario = sc;
-      _renderBtns(nowYear, nowPlaying);
+      _renderScenarioBtns(nowYear, false);
       if (_onScenarioChange) _onScenarioChange(sc);
-      close();
     });
 
-    list.appendChild(btn);
+    container.appendChild(btn);
   });
 }
 
-// ---------------------------------------------------------------------------
-// Slide transition
-// ---------------------------------------------------------------------------
-function open() {
-  const drawer = document.getElementById('wm-iso-drawer');
-  if (!drawer || _isOpen) return;
-  _isOpen = true;
-  if (typeof anime !== 'undefined') {
-    anime({ targets: drawer, translateX: ['-100%', '0%'], duration: 300, easing: 'easeOutCubic' });
-  } else {
-    drawer.style.transform = 'translateX(0%)';
-  }
-}
-
-function close() {
-  const drawer = document.getElementById('wm-iso-drawer');
-  if (!drawer || !_isOpen) return;
-  _isOpen = false;
-  if (typeof anime !== 'undefined') {
-    anime({ targets: drawer, translateX: ['0%', '-100%'], duration: 300, easing: 'easeInCubic',
-            complete: () => { drawer.style.transform = 'translateX(-100%)'; } });
-  } else {
-    drawer.style.transform = 'translateX(-100%)';
-  }
-}
-
-// ---------------------------------------------------------------------------
-// API publique
-// ---------------------------------------------------------------------------
 function initDrawer(onScenarioChange, getYear, getIsPlaying) {
   _onScenarioChange = onScenarioChange;
-
-  const toggleBtn = document.getElementById('wm-iso-menu-btn');
-  if (toggleBtn) toggleBtn.addEventListener('click', () => _isOpen ? close() : open());
-
-  // Mise à jour état au changement de lecture/année
   document.addEventListener('wm-state-change', () => {
-    _renderBtns(getYear(), getIsPlaying());
+    _renderScenarioBtns(getYear(), getIsPlaying());
   });
-
-  _renderBtns(1970, false);
+  _renderScenarioBtns(1960, false);
 }

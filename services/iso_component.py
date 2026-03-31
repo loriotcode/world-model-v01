@@ -55,33 +55,18 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
   }}
   #wm-iso-year {{ font-size: 16px; font-weight: bold; color: #4fc3f7; min-width: 42px; }}
   #wm-iso-slider {{ flex: 1; accent-color: #4fc3f7; }}
-  #wm-iso-menu-btn {{
-    background: #263238; color: #eee; border: 1px solid #546e7a;
-    padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 14px;
+  /* Scenario inline buttons */
+  #wm-iso-scenario-btns {{ display: flex; gap: 4px; margin-left: 6px; }}
+  .sc-tb-btn {{
+    background: #1e2a38; color: #90a4ae; border: 1px solid #37474f;
+    padding: 2px 10px; border-radius: 12px; cursor: pointer;
+    font-size: 11px; font-family: monospace; white-space: nowrap;
   }}
-  .scenario-tag {{ background: #1b5e20; color: #a5d6a7; padding: 1px 8px;
-                   border-radius: 10px; font-size: 11px; }}
+  .sc-tb-btn.active {{ border-color: #4fc3f7; color: #4fc3f7; background: #263238; }}
+  .sc-tb-btn.wm-disabled {{ opacity: 0.4; pointer-events: none; }}
 
   /* Canvas */
   canvas {{ display: block; }}
-
-  /* Drawer gauche */
-  #wm-iso-drawer {{
-    position: fixed; top: 38px; left: 0;
-    width: 160px; height: calc(100% - 38px);
-    background: #0d1117; border-right: 1px solid #263238;
-    transform: translateX(-100%);
-    display: flex; flex-direction: column; gap: 6px; padding: 10px;
-    z-index: 50;
-  }}
-  #wm-iso-drawer h4 {{ color: #90caf9; font-size: 12px; margin-bottom: 4px; }}
-  .scenario-btn {{
-    background: #1e2a38; color: #cfd8dc; border: 1px solid #37474f;
-    padding: 6px 10px; border-radius: 4px; cursor: pointer;
-    font-size: 12px; text-align: left;
-  }}
-  .scenario-btn.active {{ border-color: #4fc3f7; color: #4fc3f7; }}
-  .wm-disabled {{ opacity: 0.4; pointer-events: none; }}
 
   /* Banner checkpoint */
   #wm-iso-banner {{
@@ -107,16 +92,10 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
   <button id="wm-iso-play">▶</button>
   <span id="wm-iso-year">1960</span>
   <input type="range" id="wm-iso-slider" min="1960" max="2100" value="1960" step="1">
-  <span class="scenario-tag" id="wm-iso-sc-tag">{default_scenario}</span>
-  <button id="wm-iso-menu-btn">☰</button>
+  <div id="wm-iso-scenario-btns"></div>
 </div>
 
 <canvas id="wm-iso-canvas"></canvas>
-
-<div id="wm-iso-drawer">
-  <h4>Scénarios</h4>
-  <div id="wm-iso-scenario-list"></div>
-</div>
 
 <div id="wm-iso-banner">⏸ 2026 — choisissez un scénario</div>
 
@@ -283,20 +262,16 @@ function redraw() {{
 </script>
 
 <script>
-// ── Init controls (iso_controls.js) ─ appelé en dernier, après engine + drawer
+// ── Init controls (iso_controls.js)
 init(function(year) {{
-  var tag = document.getElementById('wm-iso-sc-tag');
-  if (tag) tag.textContent = year <= 2026 ? 'BAU' : currentScenario;
   document.dispatchEvent(new Event('wm-state-change'));
   redraw();
 }});
 
-// ── Init drawer (iso_drawer.js)
+// ── Init scenario buttons (iso_drawer.js)
 initDrawer(
   function(sc) {{
     currentScenario = sc;
-    var tag = document.getElementById('wm-iso-sc-tag');
-    if (tag) tag.textContent = sc;
     document.dispatchEvent(new Event('wm-state-change'));
     redraw();
   }},
