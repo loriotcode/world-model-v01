@@ -7,7 +7,13 @@
       "safe_limit": 350,
       "current": 424,
       "status": "critical",
-      "description": "Concentration de CO₂ dépasse largement la zone sûre (350 ppm)."
+      "description": "Concentration de CO₂ dépasse largement la zone sûre (350 ppm).",
+      "irreversible": true,
+      "feedback_loops": [
+        {"target_id": "biodiversity", "type": "amplifying", "description": "Le réchauffement accélère les extinctions et dégrade les écosystèmes", "source": "IPCC AR6 2021"},
+        {"target_id": "ocean", "type": "amplifying", "description": "Le CO₂ dissous acidifie les océans", "source": "IPCC AR6 2021"},
+        {"target_id": "freshwater", "type": "amplifying", "description": "Le changement climatique perturbe les cycles hydrologiques", "source": "placeholder"}
+      ]
     },
     {
       "id": "biodiversity",
@@ -16,7 +22,13 @@
       "safe_limit": 10,
       "current": 100,
       "status": "critical",
-      "description": "Extinction 10-100x supérieure au taux naturel de fond."
+      "description": "Extinction 10-100x supérieure au taux naturel de fond.",
+      "irreversible": true,
+      "feedback_loops": [
+        {"target_id": "climate", "type": "amplifying", "description": "La perte de biodiversité réduit la capture carbone des écosystèmes", "source": "Nature 2020"},
+        {"target_id": "land", "type": "amplifying", "description": "La dégradation des terres amplifie la perte d'espèces", "source": "IPBES 2019"},
+        {"target_id": "biogeochemical", "type": "amplifying", "description": "La perte d'espèces perturbe les cycles N/P", "source": "placeholder"}
+      ]
     },
     {
       "id": "land",
@@ -25,7 +37,13 @@
       "safe_limit": 75,
       "current": 60,
       "status": "exceeded",
-      "description": "Déforestation massive, surtout tropiques."
+      "description": "Déforestation massive, surtout tropiques.",
+      "irreversible": false,
+      "feedback_loops": [
+        {"target_id": "climate", "type": "amplifying", "description": "La déforestation libère du carbone stocké", "source": "Global Forest Watch 2023"},
+        {"target_id": "biodiversity", "type": "amplifying", "description": "Destruction des habitats = extinction accélérée", "source": "IPBES 2019"},
+        {"target_id": "freshwater", "type": "amplifying", "description": "Forêts régulatrices des cycles hydrologiques locaux", "source": "placeholder"}
+      ]
     },
     {
       "id": "freshwater",
@@ -34,7 +52,12 @@
       "safe_limit": 4000,
       "current": 2600,
       "status": "safe",
-      "description": "Encore dans la zone sûre globalement, mais stress régionaux critiques."
+      "description": "Encore dans la zone sûre globalement, mais stress régionaux critiques.",
+      "irreversible": false,
+      "feedback_loops": [
+        {"target_id": "land", "type": "dampening", "description": "L'irrigation soutient l'agriculture mais épuise les aquifères", "source": "placeholder"},
+        {"target_id": "biogeochemical", "type": "amplifying", "description": "Les prélèvements concentrent polluants N/P dans les cours d'eau", "source": "placeholder"}
+      ]
     },
     {
       "id": "biogeochemical",
@@ -43,7 +66,13 @@
       "safe_limit": 62,
       "current": 150,
       "status": "critical",
-      "description": "Cycle de l'azote massivement perturbé (engrais, combustion)."
+      "description": "Cycle de l'azote massivement perturbé (engrais, combustion).",
+      "irreversible": false,
+      "feedback_loops": [
+        {"target_id": "freshwater", "type": "amplifying", "description": "Les excès d'azote contaminent les nappes et rivières (eutrophisation)", "source": "Science 2009"},
+        {"target_id": "ocean", "type": "amplifying", "description": "L'azote crée des zones mortes côtières", "source": "Science 2009"},
+        {"target_id": "biodiversity", "type": "amplifying", "description": "L'eutrophisation détruit les écosystèmes aquatiques", "source": "placeholder"}
+      ]
     },
     {
       "id": "ocean",
@@ -52,7 +81,12 @@
       "safe_limit": 2.75,
       "current": 2.8,
       "status": "safe",
-      "description": "Proche de la limite, tendance défavorable."
+      "description": "Proche de la limite, tendance défavorable.",
+      "irreversible": true,
+      "feedback_loops": [
+        {"target_id": "climate", "type": "amplifying", "description": "L'acidification réduit la pompe à carbone biologique marine", "source": "Nature Climate Change 2020"},
+        {"target_id": "biodiversity", "type": "amplifying", "description": "Dissolution des coquilles = effondrement des chaînes alimentaires marines", "source": "IPCC SROCC 2019"}
+      ]
     },
     {
       "id": "aerosols",
@@ -61,7 +95,11 @@
       "safe_limit": 0.25,
       "current": 0.30,
       "status": "exceeded",
-      "description": "Pollution particulaire dépasse la limite dans plusieurs régions."
+      "description": "Pollution particulaire dépasse la limite dans plusieurs régions.",
+      "irreversible": false,
+      "feedback_loops": [
+        {"target_id": "climate", "type": "dampening", "description": "Les aérosols ont un effet refroidissant (masquage) du réchauffement", "source": "IPCC AR6 2021"}
+      ]
     },
     {
       "id": "ozone",
@@ -70,7 +108,11 @@
       "safe_limit": 276,
       "current": 283,
       "status": "safe",
-      "description": "En récupération grâce au Protocole de Montréal."
+      "description": "En récupération grâce au Protocole de Montréal.",
+      "irreversible": false,
+      "feedback_loops": [
+        {"target_id": "climate", "type": "dampening", "description": "La couche d'ozone régule le bilan radiatif stratosphérique", "source": "WMO 2022"}
+      ]
     },
     {
       "id": "novel_entities",
@@ -79,7 +121,12 @@
       "safe_limit": null,
       "current": null,
       "status": "critical",
-      "description": "Plastiques, perturbateurs endocriniens, micropolluants — limites inconnues mais franchies."
+      "description": "Plastiques, perturbateurs endocriniens, micropolluants — limites inconnues mais franchies.",
+      "irreversible": true,
+      "feedback_loops": [
+        {"target_id": "biodiversity", "type": "amplifying", "description": "Les perturbateurs endocriniens affectent la reproduction des espèces", "source": "Science 2022"},
+        {"target_id": "freshwater", "type": "amplifying", "description": "Microplastiques et polluants persistent dans les cycles hydrologiques", "source": "placeholder"}
+      ]
     }
   ],
   "source": "Stockholm Resilience Centre, 2023",

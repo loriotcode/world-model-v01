@@ -143,7 +143,18 @@ def world3_to_grid(df_row: pd.Series, cols: int = COLS, rows: int = ROWS) -> lis
 
             # --- bords : nature ---
             if dist > 0.85:
-                tile = "deep_water" if (col < 2 or row < 2) else "forest"
+                if col < 2 or row < 2:
+                    tile = "deep_water"
+                elif pol > 0.10:
+                    tile = "wasteland"
+                elif res > 0.7:
+                    tile = "forest"
+                elif res > 0.4:
+                    tile = "grass"
+                elif food > 0.5:
+                    tile = "farmland"
+                else:
+                    tile = "sand"
 
             # --- périphérie : campagne/nature ---
             elif dist > 0.60:

@@ -105,8 +105,8 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 
 <div id="wm-iso-toolbar">
   <button id="wm-iso-play">▶</button>
-  <span id="wm-iso-year">1970</span>
-  <input type="range" id="wm-iso-slider" min="1970" max="2100" value="1970" step="1">
+  <span id="wm-iso-year">1960</span>
+  <input type="range" id="wm-iso-slider" min="1960" max="2100" value="1960" step="1">
   <span class="scenario-tag" id="wm-iso-sc-tag">{default_scenario}</span>
   <button id="wm-iso-menu-btn">☰</button>
 </div>
@@ -130,7 +130,7 @@ def build_iso_html(results: dict, default_scenario: str = "BAU") -> str:
 const WM_DATA = {wm_data_json};
 
 // ── Paramètres canvas
-const COLS = 20, ROWS = 16;
+const COLS = 60, ROWS = 50;
 
 // ── State
 let currentScenario = {json.dumps(default_scenario, ensure_ascii=True)};
@@ -141,8 +141,8 @@ const canvas = document.getElementById('wm-iso-canvas');
 function resizeCanvas() {{
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight - 38;
-  TW = Math.floor(2 * canvas.width  / (COLS + ROWS));
-  TH = Math.floor(TW / 2);
+  TW = 28;
+  TH = 14;
 }}
 resizeCanvas();
 window.addEventListener('resize', () => {{ resizeCanvas(); prevGrid = null; redraw(); }});
@@ -158,8 +158,22 @@ function getOffset() {{
   }};
 }}
 
+// ── Damier calibrage 1960-1969
+function _checkerboard(cols, rows) {{
+  const grid = [];
+  for (let r = 0; r < rows; r++) {{
+    const line = [];
+    for (let c = 0; c < cols; c++) {{
+      line.push((c + r) % 2 === 0 ? 'checker_black' : 'checker_white');
+    }}
+    grid.push(line);
+  }}
+  return grid;
+}}
+
 // ── Récupère la grille pour (scenario, year) depuis WM_DATA
 function getGridForYear(scenario, year) {{
+  if (year < 1970) return _checkerboard(COLS, ROWS);
   const sc = year <= 2026 ? 'BAU' : scenario;
   const rows = WM_DATA[sc];
   if (!rows || rows.length === 0) return null;
@@ -195,8 +209,14 @@ function worldDataToGrid(row, cols, rows) {{
     for (let c = 0; c < cols; c++) {{
       const dist = Math.sqrt((c-cx)**2 + (r-cy)**2) / maxD;
       let tile;
-      if (dist > 0.85)       tile = (c < 2 || r < 2) ? 'deep_water' : 'forest';
-      else if (dist > 0.60) {{
+      if (dist > 0.85) {{
+        if (c < 2 || r < 2)  tile = 'deep_water';
+        else if (pol > 0.10) tile = 'wasteland';
+        else if (res > 0.7)  tile = 'forest';
+        else if (res > 0.4)  tile = 'grass';
+        else if (food > 0.5) tile = 'farmland';
+        else                 tile = 'sand';
+      }} else if (dist > 0.60) {{
         if (pol > 0.10)      tile = 'wasteland';
         else if (res > 0.7)  tile = 'forest';
         else if (res > 0.4)  tile = 'grass';

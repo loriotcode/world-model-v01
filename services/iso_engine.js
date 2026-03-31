@@ -4,13 +4,15 @@
  * Ordre painter : row 0→N, col 0→N
  */
 
-let TW = 80;  // tile width  (recalculé dynamiquement)
-let TH = 40;  // tile height (recalculé dynamiquement)
+let TW = 28;  // tile width
+let TH = 14;  // tile height
 
 // ---------------------------------------------------------------------------
 // C3 — Palette procédurale (12 types, zéro PNG)
 // ---------------------------------------------------------------------------
 const TILE_DEFS = {
+  checker_black: { top: '#222222', left: '#111111', right: '#333333', h: 0 },
+  checker_white: { top: '#DDDDDD', left: '#BBBBBB', right: '#EEEEEE', h: 0 },
   deep_water:  { top: '#1565C0', left: '#0D47A1', right: '#1976D2', h: 0 },
   water:       { top: '#1976D2', left: '#1565C0', right: '#42A5F5', h: 0 },
   sand:        { top: '#F9A825', left: '#F57F17', right: '#FBC02D', h: 0 },

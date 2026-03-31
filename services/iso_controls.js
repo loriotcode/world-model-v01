@@ -4,7 +4,7 @@
  */
 
 const YEARS_PER_SEC = 2;
-let _year        = 1970;
+let _year        = 1960;
 let _isPlaying   = false;
 let _timer       = null;
 let _hasPassedCheckpoint = false;
@@ -85,7 +85,7 @@ function pause() {
 }
 
 function seek(year) {
-  _year = Math.max(1970, Math.min(2100, year));
+  _year = Math.max(1960, Math.min(2100, year));
   _syncUI();
   if (_onYearChange) _onYearChange(_year);
 }
