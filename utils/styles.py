@@ -55,14 +55,13 @@ section[data-testid="stSidebar"],
 .block-container { padding:0.4rem 0.7rem 0.8rem !important; max-width:100% !important; }
 
 .wm-header {
-  display:flex; align-items:center; gap:8px;
-  padding:5px 0; border-bottom:1px solid var(--border); margin-bottom:6px;
+  display:flex; align-items:center; gap:6px;
+  padding:3px 0; border-bottom:1px solid var(--border); margin-bottom:5px;
 }
-.wm-header h1 { font-size:0.95em; font-weight:700; margin:0; color:var(--text); }
-.wm-header .sub { font-size:0.7em; color:var(--muted); margin-left:auto; }
+.wm-header h1 { font-size:0.82em; font-weight:700; margin:0; color:var(--text); letter-spacing:0.01em; }
 
 .wm-metrics {
-  display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:7px;
+  display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:7px;
 }
 .wm-metric {
   background:var(--panel); border:1px solid var(--border);
@@ -127,11 +126,38 @@ div[data-baseweb="select"] { background:var(--panel) !important; border-color:va
 .stButton button:disabled { opacity:0.45 !important; }
 
 .wm-footer {
-  margin-top:8px; font-size:0.66em; color:var(--muted);
-  text-align:center; border-top:1px solid var(--border); padding-top:5px;
+  position:fixed; bottom:6px; right:10px;
+  font-size:0.60em; color:var(--muted); opacity:0.55;
+  background:transparent; text-align:right;
 }
+.wm-footer a { color:var(--muted); text-decoration:none; }
+.wm-footer a:hover { opacity:1; color:var(--accent); }
+
+/* Selecteurs compacts */
+.compact-select .stSelectbox > div > div { min-height:28px !important; font-size:0.75em !important; }
+.compact-select label { font-size:0.68em !important; margin-bottom:1px !important; }
+
+/* Badges irreversibilite */
+.irrev-badge {
+  display:inline-block; font-size:0.58em; font-weight:700;
+  color:#fff; background:var(--crit); border-radius:3px;
+  padding:1px 4px; margin-left:5px; vertical-align:middle;
+  letter-spacing:0.04em;
+}
+
+/* Diagrammes Earth4All — fond sombre */
+.dark-diagram { background:#1a1a2e; border-radius:10px; overflow:hidden; }
 
 ::-webkit-scrollbar { width:3px; height:3px; }
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+/* ── Responsive smartphone ── */
+@media (max-width:768px) {
+  .wm-metrics { grid-template-columns:repeat(3,1fr); gap:3px; }
+  .wm-metric { padding:4px 5px; }
+  .wm-metric .val { font-size:0.9em; }
+  .block-container { padding:0.2rem 0.3rem 0.5rem !important; }
+  .wm-footer { position:static; text-align:center; margin-top:4px; }
+}
 </style>
 """
