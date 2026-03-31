@@ -53,15 +53,42 @@ def _validate_boundary(b: dict, index: int) -> dict:
     if current is not None and not isinstance(current, (int, float)):
         raise ValueError(f"Limite '{b['id']}' : current doit être numérique")
 
+    # Champs optionnels étendus
+    irreversible = b.get("irreversible", False)
+    if not isinstance(irreversible, bool):
+        raise ValueError(f"Limite '{b['id']}' : irreversible doit être un booléen")
+
+    raw_loops = b.get("feedback_loops", [])
+    if not isinstance(raw_loops, list):
+        raise ValueError(f"Limite '{b['id']}' : feedback_loops doit être une liste")
+
+    feedback_loops = []
+    valid_types = {"amplifying", "dampening"}
+    for loop in raw_loops:
+        if not isinstance(loop, dict):
+            continue
+        loop_type = loop.get("type", "")
+        if loop_type not in valid_types:
+            _logger.warning("Type de feedback invalide ignoré : %r", loop_type)
+            continue
+        feedback_loops.append({
+            "target_id":   str(loop.get("target_id", ""))[:64],
+            "type":        loop_type,
+            "description": str(loop.get("description", ""))[:512],
+            "source":      str(loop.get("source", "placeholder"))[:256],
+        })
+
     # Retourner un dict propre avec seulement les champs connus
     return {
-        "id":          str(b["id"])[:64],
-        "name":        str(b["name"])[:128],
-        "indicator":   str(b["indicator"])[:256],
-        "status":      status,                        # validé contre whitelist
-        "description": str(b["description"])[:512],
-        "safe_limit":  float(safe_limit) if safe_limit is not None else None,
-        "current":     float(current) if current is not None else None,
+        "id":             str(b["id"])[:64],
+        "name":           str(b["name"])[:128],
+        "indicator":      str(b["indicator"])[:256],
+        "status":         status,                        # validé contre whitelist
+        "description":    str(b["description"])[:512],
+        "safe_limit":     float(safe_limit) if safe_limit is not None else None,
+        "current":        float(current) if current is not None else None,
+        "irreversible":   irreversible,
+        "feedback_loops": feedback_loops,
     }
 
 
@@ -106,6 +133,18 @@ def get_status_counts(boundaries: list[dict]) -> dict:
         else:
             _logger.warning("Statut inattendu ignoré : %r", status)
     return counts
+
+
+def get_feedback_graph(boundaries: list[dict]) -> dict:
+    """
+    Retourne un graphe d'adjacence des boucles de rétroaction.
+    Structure: {source_id: [{"target_id": ..., "type": ..., "description": ..., "source": ...}]}
+    """
+    graph = {}
+    for b in boundaries:
+        bid = b["id"]
+        graph[bid] = b.get("feedback_loops", [])
+    return graph
 
 
 def boundary_radar_data(boundaries: list[dict]) -> dict:
