@@ -140,14 +140,30 @@ def chart_planetary_boundaries_as_bars(boundaries):
 
     fig = go.Figure()
 
-    # Barres principales avec % au-dessus
-    max_ratio = max((r for r in ratios), default=100)
-    text_labels = [f"{r:.0f}%" if hd else "N/A" for r, hd in zip(ratios, has_data)]
+    # Plafond d'affichage pour lisibilité (Biodiversité = 1000% écrase tout)
+    DISPLAY_CAP = 250
+    display_ratios = [min(r, DISPLAY_CAP) for r in ratios]
+
+    # Labels : flèche ↑ pour les barres tronquées
+    text_labels = []
+    for r, hd in zip(ratios, has_data):
+        if not hd:
+            text_labels.append("N/A")
+        elif r > DISPLAY_CAP:
+            text_labels.append(f"↑ {r:.0f}%")
+        else:
+            text_labels.append(f"{r:.0f}%")
+
+    # Hachures sur les barres tronquées
+    patterns = [
+        "/" if r > DISPLAY_CAP else "" for r in ratios
+    ]
 
     fig.add_trace(go.Bar(
         x=names,
-        y=ratios,
+        y=display_ratios,
         marker_color=colors,
+        marker_pattern_shape=patterns,
         text=text_labels,
         textposition="outside",
         textfont=dict(size=8, color=TEXT_COLOR),
@@ -169,16 +185,16 @@ def chart_planetary_boundaries_as_bars(boundaries):
         annotation_position="top right",
     )
 
-    # Badge "⚠ IRRÉVERSIBLE" au-dessus des barres concernées
-    for name, ratio, irr in zip(names, ratios, irrevs):
+    # Badge "⚠ IRRÉVERSIBLE" à l'intérieur des barres concernées
+    for name, dr, irr in zip(names, display_ratios, irrevs):
         if irr:
             fig.add_annotation(
                 x=name,
-                y=ratio + max_ratio * 0.06,
+                y=dr * 0.5,
                 text="<b>⚠ IRRÉVERSIBLE</b>",
                 showarrow=False,
-                font=dict(size=7, color="#a8323e"),
-                bgcolor="rgba(168,50,62,0.10)",
+                font=dict(size=6, color="white"),
+                bgcolor="rgba(168,50,62,0.75)",
                 borderpad=2,
             )
 
@@ -194,7 +210,7 @@ def chart_planetary_boundaries_as_bars(boundaries):
         ),
         yaxis=dict(
             title=dict(text="% du seuil sûr"),
-            range=[0, max_ratio * 1.38],
+            range=[0, DISPLAY_CAP * 1.18],
             **_AXIS_BASE,
         ),
         dragmode=False,

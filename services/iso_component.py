@@ -248,7 +248,7 @@ function redraw() {{
   const ctx = canvas.getContext('2d');
   const off = getOffset();
   // Fond neutre (contraste avec toutes les tuiles)
-  ctx.fillStyle = '#1565C0';
+  ctx.fillStyle = '#f8f5f0';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const year     = parseInt(document.getElementById('wm-iso-slider').value);
