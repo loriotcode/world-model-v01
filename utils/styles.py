@@ -59,27 +59,40 @@ section[data-testid="stSidebar"],
 }
 .wm-header h1 { font-size:0.82em; font-weight:700; margin:0; color:var(--text); letter-spacing:0.01em; }
 
-/* ── Navigation cubes (6 blocs) ── */
-.wm-nav {
-  display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-bottom:7px;
+/* ── Navigation radio → cubes (6 blocs) ── */
+div[data-testid="stRadio"] { margin-bottom:7px; }
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+  display:grid !important;
+  grid-template-columns:repeat(6,1fr) !important;
+  gap:5px !important;
 }
-.wm-nav-cube {
-  background:var(--panel); border:1px solid var(--border);
-  border-radius:8px; padding:7px 5px; text-align:center;
-  cursor:pointer; transition:border-color 0.15s, box-shadow 0.15s;
+div[data-testid="stRadio"] label {
+  background:var(--panel) !important;
+  border:1px solid var(--border) !important;
+  border-radius:8px !important;
+  padding:7px 5px !important;
+  text-align:center !important;
+  cursor:pointer !important;
+  min-height:50px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-size:0.72em !important;
+  line-height:1.35 !important;
+  white-space:pre-line !important;
+  transition:border-color 0.15s !important;
 }
-.wm-nav-cube:hover { border-color:var(--accent); }
-.wm-nav-cube.active {
-  border-color:var(--accent); box-shadow:0 1px 4px rgba(74,124,89,0.18);
-  font-weight:700;
+div[data-testid="stRadio"] label:hover {
+  border-color:var(--accent) !important;
 }
-.wm-nav-cube .nav-icon { font-size:1.2em; }
-.wm-nav-cube .nav-lbl  { font-size:0.60em; color:var(--muted); margin-top:1px; }
-.wm-nav-cube .nav-kpi  { font-size:0.78em; font-weight:700; color:var(--accent); margin-top:2px; }
-.wm-nav-cube.active .nav-lbl { color:var(--text); }
-
-/* Hide native Streamlit tabs when using custom nav */
-.stTabs [data-baseweb="tab-list"] { display:none !important; }
+div[data-testid="stRadio"] label:has(input:checked) {
+  border-color:var(--accent) !important;
+  font-weight:700 !important;
+  box-shadow:0 1px 4px rgba(74,124,89,0.18) !important;
+}
+/* Masquer le cercle radio natif */
+div[data-testid="stRadio"] input[type="radio"] { display:none !important; }
 
 .status-row   { display:flex; flex-wrap:wrap; gap:5px; margin:5px 0; }
 .status-pill  { padding:3px 9px; border-radius:20px; font-size:0.7em; font-weight:600; }
@@ -141,9 +154,10 @@ div[data-baseweb="select"] { background:var(--panel) !important; border-color:va
 
 /* ── Responsive smartphone ── */
 @media (max-width:768px) {
-  .wm-nav { grid-template-columns:repeat(3,1fr); gap:3px; }
-  .wm-nav-cube { padding:4px 3px; }
-  .wm-nav-cube .nav-icon { font-size:1em; }
+  div[data-testid="stRadio"] > div[role="radiogroup"] {
+    grid-template-columns:repeat(3,1fr) !important;
+  }
+  div[data-testid="stRadio"] label { min-height:40px !important; font-size:0.65em !important; }
   .block-container { padding:0.2rem 0.3rem 0.5rem !important; }
   .wm-footer { position:static; text-align:center; margin-top:4px; }
 }

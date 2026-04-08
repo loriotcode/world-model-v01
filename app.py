@@ -141,57 +141,22 @@ pop_val = f"{bau_2050['population']:.1f}" if bau_2050 is not None else "—"
 res_val = f"{bau_2050['resources']*100:.0f}%" if bau_2050 is not None else "—"
 lim_val = f"{counts['exceeded'] + counts['critical']}/9"
 
-# ─── NAVIGATION CUBES (6 blocs) ─────────────────────────────────────────────
-st.markdown(f"""
-<div class="wm-nav" id="wm-nav-cubes">
-  <div class="wm-nav-cube" data-tab="0">
-    <div class="nav-icon">📈</div><div class="nav-lbl">Modèle</div>
-    <div class="nav-kpi">{_safe_html(pop_val)} Md</div>
-  </div>
-  <div class="wm-nav-cube" data-tab="1">
-    <div class="nav-icon">🌐</div><div class="nav-lbl">Limites</div>
-    <div class="nav-kpi">{_safe_html(lim_val)}</div>
-  </div>
-  <div class="wm-nav-cube" data-tab="2">
-    <div class="nav-icon">🔄</div><div class="nav-lbl">Système</div>
-    <div class="nav-kpi">{_safe_html(res_val)}</div>
-  </div>
-  <div class="wm-nav-cube" data-tab="3">
-    <div class="nav-icon">🤖</div><div class="nav-lbl">IA</div>
-  </div>
-  <div class="wm-nav-cube" data-tab="4">
-    <div class="nav-icon">🏙</div><div class="nav-lbl">Simulation</div>
-  </div>
-  <div class="wm-nav-cube" data-tab="5">
-    <div class="nav-icon">🛠</div><div class="nav-lbl">Code</div>
-  </div>
-</div>
-<script>
-(function() {{
-  // Click cube → click hidden Streamlit tab
-  document.querySelectorAll('.wm-nav-cube').forEach(function(cube) {{
-    cube.addEventListener('click', function() {{
-      var idx = parseInt(this.getAttribute('data-tab'));
-      var tabs = parent.document.querySelectorAll('[data-baseweb="tab"]');
-      if (tabs[idx]) tabs[idx].click();
-      // Active state
-      document.querySelectorAll('.wm-nav-cube').forEach(function(c) {{ c.classList.remove('active'); }});
-      this.classList.add('active');
-    }});
-  }});
-  // Set first cube active on load
-  var first = document.querySelector('.wm-nav-cube[data-tab="0"]');
-  if (first) first.classList.add('active');
-}})();
-</script>
-""", unsafe_allow_html=True)
+# ─── NAVIGATION (radio horizontal, styled as cubes) ──────────────────────────
+_NAV_OPTS = [
+    f"📈 Modèle\n{pop_val} Md",
+    f"🌐 Limites\n{lim_val}",
+    f"🔄 Système\n{res_val}",
+    "🤖 IA",
+    "🏙 Simulation",
+    "🛠 Code",
+]
+_nav_sel = st.radio("nav", _NAV_OPTS, horizontal=True,
+                    label_visibility="collapsed", key="nav_radio")
+active = _NAV_OPTS.index(_nav_sel)
 
-# ─── TABS (barre cachée via CSS, contenu visible) ───────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    ["📈 Modèle", "🌐 Limites", "🔄 Système", "🤖 IA", "🏙", "🛠 Code"])
+# ══ Contenu conditionnel selon onglet actif ══════════════════════════════════
 
-# ══ TAB 1 : Modèle et scénario ════════════════════════════════════════════════
-with tab1:
+if active == 0:   # ── Modèle
     c1, c2, c3 = st.columns([1, 1, 1])
     with c1:
         model_src = st.selectbox(
@@ -221,8 +186,7 @@ with tab1:
         else:
             st.info("Sélectionne au moins un scénario.")
 
-# ══ TAB 2 : Limites planétaires ═══════════════════════════════════════════════
-with tab2:
+elif active == 1:   # ── Limites
     st.markdown(f"""
     <div class="status-row">
       <span class="status-pill pill-safe">✓ {counts['safe']} Safe</span>
@@ -258,8 +222,7 @@ with tab2:
     else:
         st.warning("Données limites planétaires indisponibles.")
 
-# ══ TAB 3 : Système ═══════════════════════════════════════════════════════════
-with tab3:
+elif active == 2:   # ── Système
     _model = st.session_state.get("model_src", "WorldDynamics.jl (World3)")
     if _model == "Earth4All.jl":
         st.markdown("**Architecture Earth4All**")
@@ -278,8 +241,7 @@ with tab3:
         st.plotly_chart(fig_sys, use_container_width=True,
                         config=PLOTLY_CFG, key="chart_system")
 
-# ══ TAB 4 : IA ═══════════════════════════════════════════════════════════════
-with tab4:
+elif active == 3:   # ── IA
     main_col, panel_col = st.columns([3, 1])
     with main_col:
         c1, c2 = st.columns([2, 1])
@@ -321,8 +283,6 @@ with tab4:
                 "<div class='ia-empty'>Sélectionne un scénario et lance l'analyse.</div>",
                 unsafe_allow_html=True,
             )
-
-        # Screenshot pixel-agents
         st.markdown("---")
         st.markdown("**Pixel Agents — Bureau IA**")
         st.image(
@@ -341,16 +301,14 @@ with tab4:
         if postal:
             st.info(f"Recherche ONH région {postal}…")
 
-# ══ TAB 5 : Simulation isométrique ══════════════════════════════════════════
-with tab5:
+elif active == 4:   # ── Simulation isométrique
     if not _ISO_OK:
         st.error(f"Erreur chargement composant iso : {_iso_err}")
     else:
         import streamlit.components.v1 as components
         components.html(build_iso_html(results), height=900, scrolling=False)
 
-# ══ TAB 6 : Code & GitHub ════════════════════════════════════════════════════
-with tab6:
+elif active == 5:   # ── Code & GitHub
     st.markdown("### Code & Contributions")
     st.markdown(
         "**Repository:** "
@@ -360,8 +318,7 @@ with tab6:
     st.markdown("**Deploy:** Railway (branche main)")
     st.markdown("---")
     st.markdown(
-        "**Modèles:** WorldDynamics.jl (World3 simplifié) · "
-        "Earth4All.jl (placeholder)\n\n"
+        "**Modèles:** WorldDynamics.jl (World3 simplifié) · Earth4All.jl (placeholder)\n\n"
         "**Données:** 9 limites planétaires (Stockholm Resilience Centre 2023) · "
         "3 scénarios (BAU, BAU2, SW) · Simulation 1970–2100"
     )
